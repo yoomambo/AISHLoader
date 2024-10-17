@@ -11,21 +11,21 @@ class Ender3:
         SAMPLE = 3
 
     def __init__(self, PORT = '/dev/tty.usbmodem1401') -> None:
-        self.PORT = PORT
-        try:
-            self.serial = serial.Serial(PORT, 115200)
-        except:
-            raise Exception("Failed to connect to Ender 3")
-            return
+        # self.PORT = PORT
+        # try:
+        #     self.serial = serial.Serial(PORT, 115200)
+        # except:
+        #     raise Exception("Failed to connect to Ender 3")
+        #     return
 
-        # Home all axes
-        self.serial.write(str.encode("G28\r\n"))
-        # Set units to mm, set positioning to absolute mode
-        self.serial.write(str.encode("G21 G90\r\n")) 
+        # # Home all axes
+        # self.serial.write(str.encode("G28\r\n"))
+        # # Set units to mm, set positioning to absolute mode
+        # self.serial.write(str.encode("G21 G90\r\n")) 
 
         self.current_position = [0, 0, 0]
         self.state_history = []
-        self._state = (self.SystemState.HOME, None)
+        self.STATE = (self.SystemState.HOME, None)
 
     def move_to_sample(self, sample_num):
         # (1) Gcode to move to sample position
@@ -66,6 +66,10 @@ class Ender3:
 
     @STATE.setter
     def STATE(self, new_state):
+        #Check if the new_state is a tuple
+        if not isinstance(new_state, tuple):
+            raise ValueError("Invalid state value: new_state must be a tuple")
+
         #Check if the state is valid: first part is System State, second part is None, or position number in range
         if isinstance(new_state[0], self.SystemState):
             #Set the HOME, STAGE States
@@ -84,7 +88,6 @@ class Ender3:
 
     def _track_state(self, state):
         self.state_history.append(state)
-        self.STATE = state
 
         #Limit history to 100 states
         if len(self.state_history) > 100:
