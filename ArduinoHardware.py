@@ -21,10 +21,19 @@ class LinearRail:
         self.address = address
         pass
 
-    def __getstate__(self) -> object:
+    @property
+    def STATE(self):
+        # (1) Send request to Arduino to get state
+        # (2) Parse response
+        # (3) Return state
         pass
 
-    def change_state(state):
+    @STATE.setter
+    def STATE(self, new_state):
+        # (1) Send request to Arduino to set state
+        # (2) Send request to Arduino to get state
+        # (3) Parse response
+        # (3) Return state
         pass
 
 class Gripper:
@@ -32,10 +41,19 @@ class Gripper:
         self.address = address
         pass
 
-    def __getstate__(self) -> object:
+    @property
+    def STATE(self):
+        # (1) Send request to Arduino to get state
+        # (2) Parse response
+        # (3) Return state
         pass
 
-    def change_state(state):
+    @STATE.setter
+    def STATE(self, new_state):
+        # (1) Send request to Arduino to set state
+        # (2) Send request to Arduino to get state
+        # (3) Parse response
+        # (3) Return state
         pass
 
     
