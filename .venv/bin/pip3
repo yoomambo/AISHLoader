@@ -1,4 +1,4 @@
-#!/Users/benjamin/Documents/GitHub/InsituXRD/.venv/bin/python
+#!/Users/benjamin/Documents/GitHub/AISHLoader/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys
