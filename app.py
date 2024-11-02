@@ -1,12 +1,7 @@
 from flask import Flask, jsonify, render_template, request
-import asyncio
-import datetime
-import math
-import random
-import time
-import threading
-import os
 import numpy as np
+from Ender3 import Ender3
+from ArduinoHardware import ArduinoHardware
 
 
 print('\n\n\n')
@@ -20,6 +15,11 @@ IS_SAMPLE_LOADED = False
 SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if nothing is loaded
 
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
+
+# HARDWARE VARIABLES
+ender3 = Ender3(PORT='/dev/tty.usbmodem11401')
+arduino = ArduinoHardware(port='/dev/tty.usbmodem11301')
+
 
 @app.route('/api/load_sample?<sample_num>', methods=['POST'])
 def load_sample(sample_num):
@@ -35,16 +35,20 @@ def load_sample(sample_num):
     # Execute the procedure to load a sample
     SAMPLE_POS = sample_num
     #(1) Move 3D printer to sample in sample buffer
-    #Translate plate to position
-    #Move head to position
+    ender3.move_to_sample(sample_num)
 
     #(2) Grab Sample with Gripper
+    arduino.gripper.grab()
 
     #(3) Move 3D printer to sample stage
+    ender3.move_to_stage()
 
     #(4) Release sample with Gripper
+    arduino.gripper.release()
 
     #(5) Return 3D printer to home, elevate sample stage into furnace
+    ender3.move_to_rest()
+    arduino.linear_rail.move_up()
 
     IS_SAMPLE_LOADED = True
 
@@ -55,18 +59,22 @@ def unload_sample():
         raise Exception('State Error: No Sample loaded')
     
     #(1) Remove sample stage from furnace
+    arduino.linear_rail.move_down()
 
     #(2) Move 3D printer to stage
+    ender3.move_to_stage()
 
     #(3) Grab Sample with Gripper
+    arduino.gripper.grab()
 
     #(4) Move 3D printer to Sample position (where it was originally stored)
-    #Translate plate to position
-    #Move head to position
+    ender3.move_to_sample(SAMPLE_POS)
 
     #(5) Release sample with Gripper
+    arduino.gripper.release()
 
-    #(6) Return 3D printer to home
+    #(6) Return 3D printer to rest position
+    ender3.move_to_rest()
 
     IS_SAMPLE_LOADED = False
     SAMPLE_POS = None
