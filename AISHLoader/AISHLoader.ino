@@ -127,8 +127,6 @@ void sysexCallback(byte command, byte argc, byte* argv) {
         break;
       }
 
-
-
     //Test, echo back the command
     case 0x01:
       {

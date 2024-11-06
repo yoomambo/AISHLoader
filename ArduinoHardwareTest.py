@@ -1,27 +1,31 @@
 from ArduinoHardware import ArduinoHardware
+from Ender3 import Ender3
 import time
 
 arduino = ArduinoHardware(port='/dev/tty.usbmodem1201')
+ender3 = Ender3('/dev/tty.usbmodem1401')
 
+ender3.init_homing()
 
-# time.sleep(2)
-arduino.linear_rail.move_up()
-ishomed = arduino.linear_rail.home()
-print(ishomed)
+time.sleep(2)
 
-ishomed = arduino.linear_rail.home()
-print(ishomed)
+ender3.move_to_sample(0)
+ender3.move_to_stage()
+ender3.move_to_rest()
+ender3.move_to_stage()
+ender3.move_to_rest()
+ender3.move_to_sample(0)
 
-ishomed = arduino.linear_rail.home()
-print(ishomed)
+# arduino.linear_rail.move_up()
+# ishomed = arduino.linear_rail.home()
+# print(ishomed)
 
-ishomed = arduino.linear_rail.home()
-print(ishomed)
+# ishomed = arduino.linear_rail.home()
+# print(ishomed)
 
-ishomed = arduino.linear_rail.home()
-print(ishomed)
+# ishomed = arduino.linear_rail.home()
+# print(ishomed)
 
+# ishomed = arduino.linear_rail.home()
+# print(ishomed)
 
-# arduino.board.send_sysex(0x01,[124])
-# time.sleep(2)
-# arduino.board.send_sysex(0x02,[])

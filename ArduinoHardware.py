@@ -56,8 +56,13 @@ class ArduinoHardware:
         return conv_data, data
     
 
-
     class LinearRail:
+
+        MOVE_TIMEOUT = 5
+        HOME_TIMEOUT = 10
+        CHECK_TIMEOUT = 1
+        RAIL_STEPS_PER_REV = 400
+
         def __init__(self, board) -> None:
             # Attach the callback functions to the appropriate Firmata events
             self.board = board
@@ -67,43 +72,53 @@ class ArduinoHardware:
             self.board.add_cmd_handler(LINRAIL_COUNT, self._linrail_count_callback)
             self.board.add_cmd_handler(LINRAIL_HOME, self._linrail_home_callback)
             
-            self._linrail_count = None
-            self._linrail_home_success = None
-            self._linrail_move_done = None
+            self._linrail_count = None              # Stores the count of the linear rail
+            self._linrail_home_success = None       # Stores the success of the homing operation
+            self._linrail_move_success = None       # Stores the success of the move operation
         
         def move_up(self):
-            self._linrail_move_done = None
+            #First check if it is already at the top
+            count = self.check_count()
+            if count >= 74*self.RAIL_STEPS_PER_REV:
+                return False
+
+            self._linrail_move_success = None
             self.board.send_sysex(LINRAIL_UP, [])       # Send the move up command
             
-            # Wait for the move to complete, or timeout after 5 seconds
+            # Wait for the move to complete, or timeout 
             start_time = time.time()
-            while not self._linrail_move_done and time.time() - start_time < 5:
+            while not self._linrail_move_success and time.time() - start_time < self.MOVE_TIMEOUT:
                 time.sleep(0.1)
             
-            if self._linrail_move_done is None:
+            if self._linrail_move_success is None:
                 raise("Communication Timeout: Linear rail move up failed")
-            return self._linrail_move_done            
+            return self._linrail_move_success            
 
         def move_down(self):
-            self._linrail_move_done = None
+            #First check if it is already at the bottom
+            count = self.check_count()
+            if count <= 0:
+                return False
+
+            self._linrail_move_success = None
             self.board.send_sysex(LINRAIL_DOWN, [])     # Send the move down command
 
-            # Wait for the move to complete, or timeout after 5 seconds            
+            # Wait for the move to complete, or timeout             
             start_time = time.time()
-            while not self._linrail_move_done and time.time() - start_time < 5:
+            while not self._linrail_move_success and time.time() - start_time < self.MOVE_TIMEOUT:
                 time.sleep(0.1)
             
-            if self._linrail_move_done is None:
+            if self._linrail_move_success is None:
                 raise("Communication Timeout: Linear rail move down failed")
-            return self._linrail_move_done
+            return self._linrail_move_success
 
         def home(self):
             self._linrail_home_success = None
             self.board.send_sysex(LINRAIL_HOME, [])
 
-            # Wait for the homing to complete, or timeout after 10 seconds
+            # Wait for the homing to complete, or timeout
             start_time = time.time()
-            while self._linrail_home_success is None and time.time() - start_time < 10:
+            while self._linrail_home_success is None and time.time() - start_time < self.HOME_TIMEOUT:
                 time.sleep(0.1)
             
             if self._linrail_home_success is None:
@@ -114,9 +129,9 @@ class ArduinoHardware:
             self._linrail_count = None
             self.board.send_sysex(LINRAIL_COUNT, [])
             
-            # Wait for the count to be received, or timeout after 2 seconds
+            # Wait for the count to be received, or timeout
             start_time = time.time()
-            while self._linrail_count is None and time.time() - start_time < 2:
+            while self._linrail_count is None and time.time() - start_time < self.CHECK_TIMEOUT:
                 time.sleep(0.1)
             
             if self._linrail_count is None:
@@ -127,9 +142,9 @@ class ArduinoHardware:
         def _linrail_move_callback(self, *data):
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
             if conv_data[0] == 0xFF:
-                self._linrail_move_done = True
+                self._linrail_move_success = True
             else:
-                self._linrail_move_done = False
+                self._linrail_move_success = False
         
         def _linrail_count_callback(self, *data):
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
@@ -140,6 +155,7 @@ class ArduinoHardware:
 
             # The total count is a 16-bit value, so we need to combine the two bytes
             self._linrail_count = int.from_bytes(bytes([conv_data[0], conv_data[1]]), byteorder='big', signed=True)
+            print(f"\tCount: {self._linrail_count}")
         
         def _linrail_home_callback(self, *data):
             print("Linear rail homing")
@@ -155,45 +171,96 @@ class ArduinoHardware:
                 self._linrail_home_success = False
 
     class Gripper:
+
+        MOVE_TIMEOUT = 3
+        CHECK_TIMEOUT = 1
+
         def __init__(self, board) -> None:
             # Attach the callback functions to the appropriate Firmata events
             self.board = board
+            
+            self.board.add_cmd_handler(GRIPPER_OPEN, self._gripper_move_callback)
+            self.board.add_cmd_handler(GRIPPER_CLOSE, self._gripper_move_callback)
             self.board.add_cmd_handler(GRIPPER_STATE, self._gripper_state_callback)
             self.board.add_cmd_handler(GRIPPER_STATE_ANGLE, self._gripper_angle_callback)
-            self._is_Grabbed_State = None;
-            self._servo_angle = None;
+            
+            self._gripper_is_grabbed = None;    # Stores the state of the gripper
+            self._gripper_servo_angle = None;   # Stores the angle of the servo
+            self._gripper_move_success = None;  # Stores the success of the grab operation
         
         def grab(self):
+            self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_CLOSE, [])
-            time.sleep(0.5)
+            
+            # Wait for the grab to complete, or timeout
+            start_time = time.time()
+            while not self._gripper_move_success and time.time() - start_time < self.MOVE_TIMEOUT:
+                time.sleep(0.1)
+            
+            if self._gripper_move_success is None:
+                raise("Communication Timeout: Gripper grab failed")
+            
+            return self._gripper_move_success
         
         def release(self):
+            self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_OPEN, [])
-            time.sleep(0.5)
+            
+            # Wait for the release to complete, or timeout
+            start_time = time.time()
+            while not self._gripper_move_success and time.time() - start_time < self.MOVE_TIMEOUT:
+                time.sleep(0.1)
+            
+            if self._gripper_move_success is None:
+                raise("Communication Timeout: Gripper release failed")
+            
+            return self._gripper_move_success
         
         def check_state(self):
-            # TODO: Implement a timeout, stale checking
+            self._gripper_is_grabbed = None
             self.board.send_sysex(GRIPPER_STATE, [])
-            time.sleep(0.2) # Wait for response
-            return self._is_Grabbed_State
+
+            # Wait for the state to be received, or timeout
+            start_time = time.time()
+            while self._gripper_is_grabbed is None and time.time() - start_time < self.CHECK_TIMEOUT:
+                time.sleep(0.1)
+            
+            if self._gripper_is_grabbed is None:
+                raise("Communication Timeout: Gripper state check failed")
+            
+            return self._gripper_is_grabbed
         
         def check_angle(self):
+            self._gripper_servo_angle = None
             self.board.send_sysex(GRIPPER_STATE_ANGLE, [])
-            time.sleep(0.2)
-            return self._servo_angle
+
+            # Wait for the angle to be received, or timeout
+            start_time = time.time()
+            while self._gripper_servo_angle is None and time.time() - start_time < self.CHECK_TIMEOUT:
+                time.sleep(0.1)
+
+            if self._gripper_servo_angle is None:
+                raise("Communication Timeout: Gripper angle check failed")
+            
+            return self._gripper_servo_angle
+        
+        def _gripper_move_callback(self, *data):
+            conv_data, data = ArduinoHardware._unpack_sysex(*data)
+            if conv_data[0] == 0xFF:
+                self._gripper_move_success = True
+            else:
+                self._gripper_move_success = False
 
         def _gripper_state_callback(self, *data):
-            conv_data = []
-            for d in range(0, len(data), 2):
-                conv_data.append(data[d] + (data[d+1] << 7))
+            conv_data, data = ArduinoHardware._unpack_sysex(*data)
             # print("\tReceived SysEx message:", [d for d in data])
-            # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
-            self._is_Grabbed_State = bool(conv_data[0])
+            # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data
+
+            self._gripper_is_grabbed = bool(conv_data[0])
 
         def _gripper_angle_callback(self, *data):
-            conv_data = []
-            for d in range(0, len(data), 2):
-                conv_data.append(data[d] + (data[d+1] << 7))
+            conv_data, data = ArduinoHardware._unpack_sysex(*data)
             # print("\tReceived SysEx message:", [d for d in data])
             # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
-            self._servo_angle = (conv_data[0])
+            
+            self._gripper_servo_angle = (conv_data[0])
