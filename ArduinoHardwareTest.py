@@ -2,7 +2,7 @@ from ArduinoHardware import ArduinoHardware
 from Ender3 import Ender3
 import time
 
-arduino = ArduinoHardware(port='/dev/tty.usbmodem1201')
+arduino = ArduinoHardware(PORT='/dev/tty.usbmodem1201')
 ender3 = Ender3('/dev/tty.usbmodem1401')
 
 ender3.init_homing()

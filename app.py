@@ -1,7 +1,5 @@
 from flask import Flask, jsonify, render_template, request
-import numpy as np
-from Ender3 import Ender3
-from ArduinoHardware import ArduinoHardware
+from AISHLoader import AISHLoader
 
 
 print('\n\n\n')
@@ -17,90 +15,33 @@ SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
 
 # HARDWARE VARIABLES
-ender3 = Ender3(PORT='/dev/tty.usbmodem11401')
-arduino = ArduinoHardware(port='/dev/tty.usbmodem11301')
+PORT_ENDER = '/dev/tty.usbmodem1401'
+PORT_ARDUINO = '/dev/tty.usbmodem1201'
+AISH = AISHLoader(PORT_ENDER, PORT_ARDUINO)
 
 
 @app.route('/api/load_sample?<sample_num>', methods=['POST'])
 def load_sample(sample_num):
-    # Check state to see if sample is loaded already
-    if IS_SAMPLE_LOADED:
-        raise Exception('StateError: Sample already loaded')
-        return
-    # Check if the sample position is valid
-    if sample_num not in SAMPLE_POS_LIST:
-        raise Exception(f'StateError: No Sample loaded at position {sample_num}')
-        return
-    
-    # Execute the procedure to load a sample
-    SAMPLE_POS = sample_num
-    #(1) Move 3D printer to sample in sample buffer
-    ender3.move_to_sample(sample_num)
-
-    #(2) Grab Sample with Gripper
-    arduino.gripper.grab()
-
-    #(3) Move 3D printer to sample stage
-    ender3.move_to_stage()
-
-    #(4) Release sample with Gripper
-    arduino.gripper.release()
-
-    #(5) Return 3D printer to home, elevate sample stage into furnace
-    ender3.move_to_rest()
-    arduino.linear_rail.move_up()
-
-    IS_SAMPLE_LOADED = True
+    AISH.load_sample(sample_num)
 
 @app.route('/api/unload_sample', methods=['POST'])
 def unload_sample():
-    # Check state to see if sample is loaded already
-    if not IS_SAMPLE_LOADED:
-        raise Exception('State Error: No Sample loaded')
-    
-    #(1) Remove sample stage from furnace
-    arduino.linear_rail.move_down()
-
-    #(2) Move 3D printer to stage
-    ender3.move_to_stage()
-
-    #(3) Grab Sample with Gripper
-    arduino.gripper.grab()
-
-    #(4) Move 3D printer to Sample position (where it was originally stored)
-    ender3.move_to_sample(SAMPLE_POS)
-
-    #(5) Release sample with Gripper
-    arduino.gripper.release()
-
-    #(6) Return 3D printer to rest position
-    ender3.move_to_rest()
-
-    IS_SAMPLE_LOADED = False
-    SAMPLE_POS = None
+    AISH.unload_sample()
     
 @app.route('/api/get_state', methods=['POST'])
 def get_state():
     '''
     Returns the state of the automated In-situ heating XRD loader
     '''
-    return [IS_SAMPLE_LOADED, SAMPLE_POS]
+    pass
 
 @app.route('/api/prep_sample_buffer', methods=['POST'])
-def prep_sample_buffer():
-    if IS_SAMPLE_LOADED:
-        raise Exception('StateError: Sample currently loaded, XRD likely running')
+def loading_sample_buffer():
+    # TODO: Add checks to ensure movement is feasible
     
-    #(1) Send 3D printer to home, out of the way
+    AISH.ender3.move_to_rest()
+    AISH.ender3.move_eject_bed()
 
-    #(2) Translate the 3D printer plate all the way to make space for loading
-
-@app.route('/api/loaded_sample_buffer', methods=['POST'])
-def loaded_sample_buffer():
-    requestData = request.get_json()
-    sample_positions = requestData.get('sample_positions')
-
-    SAMPLE_POS_LIST = tuple(sample_positions)
     
 @app.route('/')
 def index():

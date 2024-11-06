@@ -22,15 +22,15 @@ TEST_ECHO = 0x01
 TEST_RESPONSE = 0x02
 
 class ArduinoHardware:
-    def __init__(self, port) -> None:
+    def __init__(self, PORT) -> None:
         # Create a new board instance at the specified port
-        self.board = pyfirmata.Arduino(port)
+        self.board = pyfirmata.Arduino(PORT)
 
 
         # Start iterator to avoid buffer overflow
         it = pyfirmata.util.Iterator(self.board)
         it.start()
-        print("Arduino connected")
+        print("Arduino connected on port: ", PORT)
 
         # Attach the callback functions to the test commands
         self.board.add_cmd_handler(TEST_RESPONSE, self._default_callback)
@@ -75,6 +75,8 @@ class ArduinoHardware:
             self._linrail_count = None              # Stores the count of the linear rail
             self._linrail_home_success = None       # Stores the success of the homing operation
             self._linrail_move_success = None       # Stores the success of the move operation
+
+            self.state_history = []
         
         def move_up(self):
             #First check if it is already at the top
@@ -138,6 +140,14 @@ class ArduinoHardware:
                 raise("Communication Timeout: Linear rail count failed")
             
             return self._linrail_count
+        
+        def _track_state(self, state):
+            self.state_history.append(state)
+
+            #Limit history to 100 states
+            if len(self.state_history) > 100:
+                self.state_history.pop(0)
+
         
         def _linrail_move_callback(self, *data):
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
