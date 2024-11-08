@@ -62,7 +62,7 @@ class AISHLoader(StateTracker):
             'gripper': self.arduino.gripper.get_state(),
         }
 
-    def home(self):
+    def home_all(self):
         """
         Homes the linear rail and initializes the homing process for the Ender 3 printer.
         This method performs the following steps:
@@ -88,13 +88,13 @@ class AISHLoader(StateTracker):
         self.ender3.init_homing()
 
         result = self.arduino.linear_rail.home()
+        print(result)
         max_attempts = 3
         attempt = 1
-        while result == False or attempt <= max_attempts:
+        while result == False and attempt <= max_attempts:
             user_input = input(f"Homing failed (attempt {attempt} out of {max_attempts}). Do you want to try again? (y/n): ")
             if user_input.lower() != 'y':
                 raise Exception("User stopped the process.")
-            
             attempt += 1
 
         if attempt > max_attempts:
@@ -203,7 +203,6 @@ class AISHLoader(StateTracker):
         if is_buffer_ejected:
             self._track_state("EJECT_BUFFER")
             self.ALLOW_MOVEMENT = False
-            self.ender3.move_to_rest()
             self.ender3.move_eject_bed()
         else:
             self._track_state("LOAD_BUFFER")

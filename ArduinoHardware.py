@@ -145,7 +145,7 @@ class ArduinoHardware:
             if self._linrail_home_success is None:
                 raise("Communication Timeout: Linear rail homing failed")
             
-            logging.info("Arduino - Linear Rail - Homing successful")
+            logging.info(f"Arduino - Linear Rail - Homing successful {self._linrail_home_success}")
             return self._linrail_home_success
 
         def check_count(self):
@@ -200,7 +200,7 @@ class ArduinoHardware:
 
         def __init__(self, board) -> None:
             super().__init__()      # Initialize the StateTracker class
-            
+
             # Attach the callback functions to the appropriate Firmata events
             self.board = board
             
