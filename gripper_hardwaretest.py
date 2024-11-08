@@ -11,9 +11,9 @@ def main():
         user_input = input("Enter command (1 to grab, 0 to release, 'check' to see state, 'exit' to quit): ")
 
         if user_input == '1':
-            arduino.gripper.grab()
+            arduino.gripper.close()
         elif user_input == '0':
-            arduino.gripper.release()
+            arduino.gripper.open()
         elif user_input.lower() == 'check':
             state = arduino.gripper.check_state()
             print(f"Gripper grabbing: {state}")

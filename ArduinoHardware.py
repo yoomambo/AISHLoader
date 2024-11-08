@@ -6,6 +6,14 @@
 
 import pyfirmata
 import time
+from StateTracker import StateTracker
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",
+    datefmt='%y-%m-%d %H:%M:%S'
+)
 
 # Define pyfirmata commands
 GRIPPER_OPEN = 0x10
@@ -23,15 +31,17 @@ TEST_RESPONSE = 0x02
 
 class ArduinoHardware:
     def __init__(self, PORT) -> None:
-        # Create a new board instance at the specified port
-        self.board = pyfirmata.Arduino(PORT)
+        try:
+            # Create a new board instance at the specified port
+            self.board = pyfirmata.Arduino(PORT)
 
-
-        # Start iterator to avoid buffer overflow
-        it = pyfirmata.util.Iterator(self.board)
-        it.start()
-        print("Arduino connected on port: ", PORT)
-
+            # Start iterator to avoid buffer overflow
+            it = pyfirmata.util.Iterator(self.board)
+            it.start()
+            logging.info(f"Arduino - Connected on port: {PORT}")
+        except:
+            raise Exception("Failed to connect to Arduino")
+        
         # Attach the callback functions to the test commands
         self.board.add_cmd_handler(TEST_RESPONSE, self._default_callback)
         self.board.add_cmd_handler(TEST_ECHO, self._default_callback)
@@ -40,23 +50,25 @@ class ArduinoHardware:
         self.gripper = self.Gripper(self.board)
         self.linear_rail = self.LinearRail(self.board)
 
+        self.gripper.open()  # Release the gripper on initialization
+        self.linear_rail.home() # Home the linear rail on initialization
+
     # Default callback function for handling SysEx messages. Parses the data and converts it to a list of bytes
     def _default_callback(self, *data):
         conv_data, data = ArduinoHardware._unpack_sysex(*data)
 
-        print("\tReceived SysEx message:", [d for d in data])
-        print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
+        logging.debug("\tTEST SYSEX - Received SysEx message:", [d for d in data])
+        logging.debug(f"\tTEST SYSEX - Converted data: {[bin(d) for d in conv_data]} = {conv_data}")
     
     @staticmethod
     def _unpack_sysex(*data):
-        print("unpacking....")
         conv_data = []
         for d in range(0, len(data), 2):
             conv_data.append(data[d] + (data[d+1] << 7))
         return conv_data, data
     
 
-    class LinearRail:
+    class LinearRail(StateTracker):
 
         MOVE_TIMEOUT = 5
         HOME_TIMEOUT = 10
@@ -64,6 +76,8 @@ class ArduinoHardware:
         RAIL_STEPS_PER_REV = 400
 
         def __init__(self, board) -> None:
+            super().__init__()      # Initialize the StateTracker class
+            
             # Attach the callback functions to the appropriate Firmata events
             self.board = board
 
@@ -75,10 +89,9 @@ class ArduinoHardware:
             self._linrail_count = None              # Stores the count of the linear rail
             self._linrail_home_success = None       # Stores the success of the homing operation
             self._linrail_move_success = None       # Stores the success of the move operation
-
-            self.state_history = []
         
         def move_up(self):
+            self._track_state("MOVE_UP")
             #First check if it is already at the top
             count = self.check_count()
             if count >= 74*self.RAIL_STEPS_PER_REV:
@@ -94,9 +107,12 @@ class ArduinoHardware:
             
             if self._linrail_move_success is None:
                 raise("Communication Timeout: Linear rail move up failed")
+            
+            logging.info("Arduino - Linear Rail - Moved up")
             return self._linrail_move_success            
 
         def move_down(self):
+            self._track_state("MOVE_DOWN")
             #First check if it is already at the bottom
             count = self.check_count()
             if count <= 0:
@@ -112,9 +128,12 @@ class ArduinoHardware:
             
             if self._linrail_move_success is None:
                 raise("Communication Timeout: Linear rail move down failed")
+            
+            logging.info("Arduino - Linear Rail - Moved down")
             return self._linrail_move_success
 
         def home(self):
+            self._track_state("HOMING")
             self._linrail_home_success = None
             self.board.send_sysex(LINRAIL_HOME, [])
 
@@ -125,6 +144,8 @@ class ArduinoHardware:
             
             if self._linrail_home_success is None:
                 raise("Communication Timeout: Linear rail homing failed")
+            
+            logging.info("Arduino - Linear Rail - Homing successful")
             return self._linrail_home_success
 
         def check_count(self):
@@ -139,15 +160,9 @@ class ArduinoHardware:
             if self._linrail_count is None:
                 raise("Communication Timeout: Linear rail count failed")
             
+            logging.info(f"Arduino - Linear Rail - Count: {self._linrail_count}")
+
             return self._linrail_count
-        
-        def _track_state(self, state):
-            self.state_history.append(state)
-
-            #Limit history to 100 states
-            if len(self.state_history) > 100:
-                self.state_history.pop(0)
-
         
         def _linrail_move_callback(self, *data):
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
@@ -159,33 +174,33 @@ class ArduinoHardware:
         def _linrail_count_callback(self, *data):
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
 
-            print("Linear rail count")
-            print("\tReceived SysEx message:", [d for d in data])
-            print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
+            # print("Linear rail count")
+            # print("\tReceived SysEx message:", [d for d in data])
+            # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
 
             # The total count is a 16-bit value, so we need to combine the two bytes
             self._linrail_count = int.from_bytes(bytes([conv_data[0], conv_data[1]]), byteorder='big', signed=True)
-            print(f"\tCount: {self._linrail_count}")
+            # print(f"\tCount: {self._linrail_count}")
         
         def _linrail_home_callback(self, *data):
-            print("Linear rail homing")
-
             conv_data, data = ArduinoHardware._unpack_sysex(*data)
 
-            print("\tReceived SysEx message:", [d for d in data])
-            print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
+            # print("\tReceived SysEx message:", [d for d in data])
+            # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
             
             if conv_data[0] == 0xFF:
                 self._linrail_home_success = True
             else:
                 self._linrail_home_success = False
 
-    class Gripper:
+    class Gripper(StateTracker):
 
         MOVE_TIMEOUT = 3
         CHECK_TIMEOUT = 1
 
         def __init__(self, board) -> None:
+            super().__init__()      # Initialize the StateTracker class
+            
             # Attach the callback functions to the appropriate Firmata events
             self.board = board
             
@@ -198,7 +213,9 @@ class ArduinoHardware:
             self._gripper_servo_angle = None;   # Stores the angle of the servo
             self._gripper_move_success = None;  # Stores the success of the grab operation
         
-        def grab(self):
+        
+        def close(self):
+            self._track_state("MOVE_GRAB")
             self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_CLOSE, [])
             
@@ -210,9 +227,12 @@ class ArduinoHardware:
             if self._gripper_move_success is None:
                 raise("Communication Timeout: Gripper grab failed")
             
+            logging.debug("Arduino - Gripper - Closed")
+            
             return self._gripper_move_success
         
-        def release(self):
+        def open(self):
+            self._track_state("MOVE_RELEASE")
             self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_OPEN, [])
             
@@ -224,6 +244,8 @@ class ArduinoHardware:
             if self._gripper_move_success is None:
                 raise("Communication Timeout: Gripper release failed")
             
+            logging.debug("Arduino - Gripper - Opened")
+
             return self._gripper_move_success
         
         def check_state(self):
@@ -237,6 +259,8 @@ class ArduinoHardware:
             
             if self._gripper_is_grabbed is None:
                 raise("Communication Timeout: Gripper state check failed")
+            
+            logging.info(f"Arduino - Gripper - is grabbing: {self._gripper_is_grabbed}")
             
             return self._gripper_is_grabbed
         
@@ -252,6 +276,7 @@ class ArduinoHardware:
             if self._gripper_servo_angle is None:
                 raise("Communication Timeout: Gripper angle check failed")
             
+            logging.info(f"Arduino - Gripper - Angle: {self._gripper_servo_angle}")
             return self._gripper_servo_angle
         
         def _gripper_move_callback(self, *data):

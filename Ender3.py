@@ -1,50 +1,73 @@
 import serial
 import time
+from StateTracker import StateTracker
+import numpy as np
+import re
 
-STAGE_POSITION = (200, 0, 50)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
-SAMPLE_POSITIONS =  [(12, y_pos, 10) for y_pos in [77, 107, 137, 167]]   #List of sample positions (x,y,z) in Ender3 coordinates, all Z should be the same
+import logging
 
-ENDER_LIMITS = {
-    'X': (0, 220),
-    'Y': (0, 220),
-    'Z': (0, 250)
-}
+#Set up logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",
+    datefmt='%y-%m-%d %H:%M:%S'
+)
 
-class Ender3:
+STAGE_POSITION = (200, 0, 30)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
+# List of sample positions (x,y,z) in Ender3 coordinates
+SAMPLE_POSITIONS = np.array( [(39.25, 177 - 39.75*i, 3) for i in range(5)]  + [(80, 177 - 39.75*i, 12) for i in range(5)] )
+SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples
 
-    def __init__(self, PORT = '/dev/tty.usbmodem1401') -> None:
+ENDER_LIMITS = [(0, 220), (0, 220), (0, 250)]
+ENDER_MAX_SPEED = np.array([1000, 1000, 300])
+
+class Ender3(StateTracker):
+
+    def __init__(self, PORT = '/dev/tty.usbmodem1401'):
+        super().__init__()      # Initialize the StateTracker class
         self.PORT = PORT
+
         try:
             self.serial = serial.Serial(PORT, 115200)
         except:
             raise Exception("Failed to connect to Ender 3")
-            return
 
-        print("Ender3 connected on port: ", PORT)
-
-        self.state_history = []
+        logging.info(f"Ender3 - Connected on port: {PORT}")
+        self.serial.flushInput(); self.serial.flushOutput()
 
         # Set units to mm, set positioning to absolute mode
         self.serial.write(str.encode("G21 G90\r\n")) 
         
+        self.current_position = np.array([0, 0, 0])
+        self._update_current_position()     #Get the current position of the Ender3
         self.init_homing()
-        self.current_position = [0, 0, 0]
-
+        
 
     def move_to_sample(self, sample_num):
+        """
+        Moves the machine to the specified sample position.
+
+        Parameters:
+        sample_num (int): The index of the sample position to move to.
+        """
         self._track_state(f"MOVE_SAMPLE_{sample_num}")
         sample_pos = SAMPLE_POSITIONS[sample_num]
 
         #Move to above the sample position first
-        self._move_to(sample_pos[0], self.current_position[1], sample_pos[2]+15, 1200) #Hold Y constant
-
-        #Move the sample stage to under the grabber
-        self._move_to(sample_pos[0], sample_pos[1], sample_pos[2]+15, 4000)
+        self._move_to(self.current_position[0]  , self.current_position[1]  , SAMPLE_MIN_Z, 1200) #Move only Z first
+        self._move_to(sample_pos[0]             , sample_pos[1]             , SAMPLE_MIN_Z, 4000) #Move above the sample position
 
         #Now we can move down to the sample position and grab the sample
         self._move_to(*sample_pos, 1000)
 
     def move_to_stage(self):
+        """
+        Moves the device to the stage position in a three-step process to avoid collisions and enable sample pickup.
+        This method uses predefined constants for the stage position and a Z-axis offset to ensure safe movements.
+
+        Raises:
+            Any exceptions raised by the _move_to or _track_state methods.
+        """
         self._track_state("MOVE_STAGE")
         stage_z_offset = 20
 
@@ -57,61 +80,129 @@ class Ender3:
         #Then move Z to stage position to place down the sample
         self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_POSITION[2], 1000)
 
-    #Rest position is away from the stage, with sample holder at the current sample.
-    #This is intended to be used after the sample is loaded and the XRD is running
     def move_to_rest(self):
+        """
+        Moves the machine to its rest position. This is intended to be used after 
+        the sample is loaded and the XRD is running. Rest position is away from 
+        the stage, with sample holder at the current sample
+
+        This method performs the following steps:
+        1. Moves the Z-axis up to avoid collision with the stage.
+        2. Moves the X-axis backwards to position the gripper out of the way.
+
+        The movement speeds are set to 1000 for the Z-axis and 4000 for the X-axis.
+
+        Raises:
+            Any exceptions raised by the _move_to method.
+        """
         self._track_state("MOVE_REST")
+        stage_z_offset = 20
+
         # Move Z back up to avoid collision with the stage
-        self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_POSITION[2]+stage_z_offset, 1000)
+        self._move_to(self.current_position[0], self.current_position[1], self.current_position[2]+stage_z_offset, 1000)
 
         # Move X backwards, gripper out of the way of everything
         self._move_to(0, self.current_position[1], self.current_position[2], 4000)
 
     # Moves the bed to the eject position, for loading/unloading the samples
     def move_eject_bed(self):
+        """
+        Moves the bed to the eject position, for loading/unloading the samples
+
+        This method updates the state to "MOVE_EJECT" and moves the bed to the 
+        maximum Y position while keeping the current X and Z positions unchanged.
+        """
         self._track_state("MOVE_EJECT")
-        self._move_to(self.current_position[0], ENDER_LIMITS.Y[1], self.current_position[2])
+        self._move_to(self.current_position[0]  , self.current_position[1]  , SAMPLE_MIN_Z)     #First move Z up to avoid collision with the bed
+        self._move_to(0                         , self.current_position[1]  , SAMPLE_MIN_Z)     #Move bed to the eject position
+        self._move_to(0                         , ENDER_LIMITS[1][1]         , SAMPLE_MIN_Z, 4000)     #Move bed to the eject position
 
     def move_to_home(self):
+        """
+        Moves the machine to its home position.
+        """
         self._track_state("MOVE_HOME")
 
-        #Move Y to 0 first to avoid collisions, then XZ to 0
+        #Move Z up to avoid collision with the bed
+        self._move_to(self.current_position[0], self.current_position[1], SAMPLE_MIN_Z)
+
+        #Now move bed out of the way
         self._move_to(0, self.current_position[1], self.current_position[2])
         self._move_to(0, 0, 0)
 
     def init_homing(self): 
-        print("ENDER3: Starting homing routine")
-        self._track_state( "HOMING" )
-
-        # (1) Gcode to move to HOME, do homing routine
-        self.serial.write(str.encode("G28\r\n"))
-
-        # (2) Update current_position (XYZ)
-        self.current_position = [0, 0, 0]
-        
-        # TODO: (4) Halt until movement is complete
-    
-    def _move_to(self, x, y, z, speed=1200):
-        #Calculate the distance to move, time
-        distance = ((x - self.current_position[0])**2 + (y - self.current_position[1])**2 + (z - self.current_position[2])**2)**0.5
-        time_to_move = distance / (speed/60)
-
-        # Gcode to move to XYZ
-        self.serial.write(str.encode(f"G01 X{x} Y{y} Z{z} F{speed}\r\n"))
+        """
+        Initiates the homing routine for the Ender3 3D printer.
+        TODO:
+        - Halt until the movement is complete.
+        Returns:
+            None
+        """
+        logging.info("Ender3 - Initiating homing routine")
+        self._track_state("HOMING")
 
         # Update current_position (XYZ)
-        self.current_position = [x, y, z]
+        self._update_current_position()
+        #Move Z up to avoid collision with the bed
+        self._move_to(self.current_position[0], self.current_position[1], self.current_position[2]+SAMPLE_MIN_Z)
+        
+        # (1) Gcode to move to HOME, do homing routine
+        self.serial.write(str.encode("G28\r\n"))
+        self._wait_for_response(60)
 
-        # Halt until movement is complete
-        time.sleep(time_to_move + 2)
-        print("Movement complete")
+        # (2) Update current_position (XYZ)
+        self._update_current_position()
+        
+        logging.info("Ender3 - Homing routine complete")
+    
+    def _move_to(self, x, y, z, speed=2000):
+        #Calculate the distance to move, time to set the timeout
+        distances = np.array( [(x - self.current_position[0]), (y - self.current_position[1]), (z - self.current_position[2])] )
+        MAX_TIMEOUT = max( np.abs(distances)/ENDER_MAX_SPEED *60 ) + 10
+        # print(f"Distance: {distances}, Time: {MAX_TIMEOUT}")
 
-    def get_state(self):
-        return self.state_history[-1]
+        logging.debug(f"Ender3 - Starting move to {float(x), float(y), float(z)} from {self.current_position}")
+        self.serial.write(str.encode(f"G01 X{x} Y{y} Z{z} F{speed}\r\n"))   # Gcode to move to XYZ
+        #Wait for the move to complete
+        self._wait_for_response(MAX_TIMEOUT)
 
-    def _track_state(self, state):
-        self.state_history.append(state)
+        #Update the current position
+        self.current_position = np.array([x, y, z], dtype=float)
+        self._update_current_position()
 
-        #Limit history to 100 states
-        if len(self.state_history) > 100:
-            self.state_history.pop(0)
+        logging.debug(f"Ender3 - Moved to:  {float(x), float(y), float(z)}")
+
+    def _update_current_position(self):
+        # Gcode to get current position
+        self.serial.write(str.encode("M114\n"))
+        time.sleep(0.1)
+        
+        response = self.serial.read_all().decode('utf-8').strip()
+
+        # Parse the response and update the current position
+        match = re.search(r"X:(\d+\.\d+) Y:(\d+\.\d+) Z:(\d+\.\d+)", response)
+
+        if match:
+            x, y, z = match.groups()
+            measured_position = np.array([float(x), float(y), float(z)], dtype=float)
+
+            if np.linalg.norm( measured_position - self.current_position ) > 0.001:
+                logging.debug(f"Ender3 - Position updated from {self.current_position} to {measured_position}")
+
+            self.current_position = measured_position
+        else:
+            logging.error(f"Ender3 - No response for position update")
+
+    def _wait_for_response(self, MAX_TIMEOUT=20):
+        self.serial.write(str.encode("M400\n")) #Command to wait until movement is complete before moving to next command
+        self.serial.write(str.encode("M114\n")) #Command to get current position, this will only return when the move command is complete
+
+        #Keep checking the serial port every 0.5s until the move is complete and M114 returns the current position
+        start_time = time.time()
+        while time.time()-start_time < MAX_TIMEOUT:
+            response = self.serial.read_all().decode('utf-8').strip()
+            if "X" in response and "Y" in response and "Z" in response:
+                return
+            time.sleep(0.5)
+        
+        logging.error(f"Ender3 - Wait command timed out after {MAX_TIMEOUT} seconds")
