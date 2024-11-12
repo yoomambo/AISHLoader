@@ -24,6 +24,11 @@ pip install -r requirements.txt
 # System Control Flow
 `pass`
 
+# Schematic
+Wiring Diagram:
+![Wiring Diagram](https://github.com/user-attachments/assets/76260eae-3e04-467a-bbfc-a75757b5d316)
+
+
 # CAD
 A Solidworks CAD is supplied...
 
