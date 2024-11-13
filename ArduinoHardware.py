@@ -8,6 +8,7 @@ import pyfirmata
 import time
 from StateTracker import StateTracker
 import logging
+from AISH_utils import CommunicationError, CommunicationErrorChecker
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,6 +51,9 @@ class ArduinoHardware:
         self.gripper = self.Gripper(self.board)
         self.linear_rail = self.LinearRail(self.board)
 
+        # Set the callback function for the CommunicationErrorChecker
+        CommunicationErrorChecker.set_get_state_callback(self.get_state)
+
         self.gripper.open()  # Release the gripper on initialization
         self.linear_rail.home() # Home the linear rail on initialization
 
@@ -89,7 +93,11 @@ class ArduinoHardware:
             self._linrail_count = None              # Stores the count of the linear rail
             self._linrail_home_success = None       # Stores the success of the homing operation
             self._linrail_move_success = None       # Stores the success of the move operation
+
+            # Set the callback function for the CommunicationErrorChecker
+            CommunicationErrorChecker.set_get_state_callback(self.get_state)
         
+        @CommunicationErrorChecker.confirm_action()
         def move_up(self):
             self._track_state("MOVE_UP")
             #First check if it is already at the top
@@ -106,11 +114,12 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._linrail_move_success is None:
-                raise("Communication Timeout: Linear rail move up failed")
+                raise CommunicationError("Linear Rail - Timeout, Move up failed")
             
             logging.info("Arduino - Linear Rail - Moved up")
             return self._linrail_move_success            
 
+        @CommunicationErrorChecker.confirm_action()
         def move_down(self):
             self._track_state("MOVE_DOWN")
             #First check if it is already at the bottom
@@ -127,11 +136,12 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._linrail_move_success is None:
-                raise("Communication Timeout: Linear rail move down failed")
+                raise CommunicationError("Linear Rail - Timeout, Move down failed")
             
             logging.info("Arduino - Linear Rail - Moved down")
             return self._linrail_move_success
 
+        @CommunicationErrorChecker.confirm_action()
         def home(self):
             self._track_state("HOMING")
             self._linrail_home_success = None
@@ -143,11 +153,12 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._linrail_home_success is None:
-                raise("Communication Timeout: Linear rail homing failed")
+                raise CommunicationError("Linear Rail - Timeout, Homing failed")
             
             logging.info(f"Arduino - Linear Rail - Homing successful {self._linrail_home_success}")
             return self._linrail_home_success
 
+        @CommunicationErrorChecker.confirm_action()
         def check_count(self):
             self._linrail_count = None
             self.board.send_sysex(LINRAIL_COUNT, [])
@@ -158,7 +169,7 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._linrail_count is None:
-                raise("Communication Timeout: Linear rail count failed")
+                raise CommunicationError("Linear Rail - Timeout, Count check failed")
             
             logging.info(f"Arduino - Linear Rail - Count: {self._linrail_count}")
 
@@ -212,8 +223,11 @@ class ArduinoHardware:
             self._gripper_is_grabbed = None;    # Stores the state of the gripper
             self._gripper_servo_angle = None;   # Stores the angle of the servo
             self._gripper_move_success = None;  # Stores the success of the grab operation
+
+            # Set the callback function for the CommunicationErrorChecker
+            CommunicationErrorChecker.set_get_state_callback(self.get_state)
         
-        
+        @CommunicationErrorChecker.confirm_action()
         def close(self):
             self._track_state("MOVE_GRAB")
             self._gripper_move_success = None
@@ -225,12 +239,13 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._gripper_move_success is None:
-                raise("Communication Timeout: Gripper grab failed")
+                raise CommunicationError("Gripper - Timeout, close failed")
             
             logging.debug("Arduino - Gripper - Closed")
             
             return self._gripper_move_success
         
+        @CommunicationErrorChecker.confirm_action()
         def open(self):
             self._track_state("MOVE_RELEASE")
             self._gripper_move_success = None
@@ -242,12 +257,13 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._gripper_move_success is None:
-                raise("Communication Timeout: Gripper release failed")
+                raise CommunicationError("Gripper - Timeout, Release failed")
             
             logging.debug("Arduino - Gripper - Opened")
 
             return self._gripper_move_success
         
+        @CommunicationErrorChecker.confirm_action()
         def check_state(self):
             self._gripper_is_grabbed = None
             self.board.send_sysex(GRIPPER_STATE, [])
@@ -258,12 +274,13 @@ class ArduinoHardware:
                 time.sleep(0.1)
             
             if self._gripper_is_grabbed is None:
-                raise("Communication Timeout: Gripper state check failed")
+                raise CommunicationError("Gripper - Timeout, State check failed")
             
             logging.info(f"Arduino - Gripper - is grabbing: {self._gripper_is_grabbed}")
             
             return self._gripper_is_grabbed
         
+        @CommunicationErrorChecker.confirm_action()
         def check_angle(self):
             self._gripper_servo_angle = None
             self.board.send_sysex(GRIPPER_STATE_ANGLE, [])
@@ -274,7 +291,7 @@ class ArduinoHardware:
                 time.sleep(0.1)
 
             if self._gripper_servo_angle is None:
-                raise("Communication Timeout: Gripper angle check failed")
+                raise CommunicationError("Gripper - Timeout, Angle check failed")
             
             logging.info(f"Arduino - Gripper - Angle: {self._gripper_servo_angle}")
             return self._gripper_servo_angle

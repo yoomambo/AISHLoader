@@ -3,6 +3,7 @@ import time
 from StateTracker import StateTracker
 import numpy as np
 import re
+from AISH_utils import CommunicationError, CommunicationErrorChecker
 
 import logging
 
@@ -41,6 +42,9 @@ class Ender3(StateTracker):
         self.current_position = np.array([0, 0, 0])
         self._update_current_position()     #Get the current position of the Ender3
         self.init_homing()
+
+        # Set the callback function for the CommunicationErrorChecker
+        CommunicationErrorChecker.set_get_state_callback(self.get_state)
         
 
     def move_to_sample(self, sample_num):
@@ -155,6 +159,7 @@ class Ender3(StateTracker):
         
         logging.info("Ender3 - Homing routine complete")
     
+    @CommunicationErrorChecker.confirm_action()
     def _move_to(self, x, y, z, speed=2000):
         #Calculate the distance to move, time to set the timeout
         distances = np.array( [(x - self.current_position[0]), (y - self.current_position[1]), (z - self.current_position[2])] )
@@ -172,6 +177,7 @@ class Ender3(StateTracker):
 
         logging.debug(f"Ender3 - Moved to:  {float(x), float(y), float(z)}")
 
+    @CommunicationErrorChecker.confirm_action()
     def _update_current_position(self):
         # Gcode to get current position
         self.serial.write(str.encode("M114\n"))
@@ -191,7 +197,7 @@ class Ender3(StateTracker):
 
             self.current_position = measured_position
         else:
-            logging.error(f"Ender3 - No response for position update")
+            raise CommunicationError("Ender3 - No response to update current position")
 
     def _wait_for_response(self, MAX_TIMEOUT=20):
         self.serial.write(str.encode("M400\n")) #Command to wait until movement is complete before moving to next command
@@ -205,4 +211,4 @@ class Ender3(StateTracker):
                 return
             time.sleep(0.5)
         
-        logging.error(f"Ender3 - Wait command timed out after {MAX_TIMEOUT} seconds")
+        raise CommunicationError("Ender3 - Wait command timed out")

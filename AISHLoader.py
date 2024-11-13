@@ -62,6 +62,20 @@ class AISHLoader(StateTracker):
             'gripper': self.arduino.gripper.get_state(),
         }
 
+    def home_ender(self):
+        """
+        Homes the Ender 3 printer.
+
+        Raises:
+            Exception: If movement is not allowed.
+        """
+        if self.ALLOW_MOVEMENT == False:
+            raise Exception('StateError: Movement is not allowed')
+        
+        self._track_state("HOMING_ENDER")
+
+        self.ender3.init_homing()
+
     def home_all(self):
         """
         Homes the linear rail and initializes the homing process for the Ender 3 printer.
@@ -184,7 +198,7 @@ class AISHLoader(StateTracker):
         self.ender3.move_to_rest()
         self.SAMPLE_LOADED = None
 
-    def change_samples(self, is_buffer_ejected):
+    def eject_sample_buffer(self, buffer_to_eject):
         """
         Change the state of the sample buffer.
 
@@ -200,7 +214,7 @@ class AISHLoader(StateTracker):
                                       ejected (True) or loaded (False).
         """
         #Eject the sample buffer
-        if is_buffer_ejected:
+        if buffer_to_eject:
             self._track_state("EJECT_BUFFER")
             self.ALLOW_MOVEMENT = False
             self.ender3.move_eject_bed()

@@ -122,11 +122,59 @@
                         <label for="item-name" class="form-label">Item Name</label>
                         <input type="text" class="form-control" id="item-name" placeholder="Enter item name" required>
                     </div>
+
                     <!-- Sample Number -->
                     <div class="mb-3">
-                        <label for="sample-number" class="form-label">Sample Number (1-10)</label>
-                        <input type="number" class="form-control" id="sample-number" min="1" max="10" required>
+                        <label for="sample-number" class="form-label">Sample Position Number</label>
+                        <div id="sample-number-container" class="container">
+                            <!-- Radio buttons will be dynamically generated here -->
+                        </div>
                     </div>
+                    <script>
+                        const sampleNumberContainer = document.getElementById('sample-number-container');
+
+                        // Generate 2 rows of 5 buttons each
+                        generateRadioButtons(2, 5);
+
+                        // Function to generate radio buttons
+                        function generateRadioButtons(rows, buttonsPerRow) {
+                            sampleNumberContainer.innerHTML = ''; // Clear existing buttons
+                            let buttonCount = 0;
+
+                            for (let row = 0; row < rows; row++) {
+                                const rowDiv = document.createElement('div');
+                                rowDiv.className = 'row mb-2';
+
+                                for (let col = 0; col < buttonsPerRow; col++) {
+                                    if (buttonCount > rows * buttonsPerRow) break;
+
+                                    const radioWrapper = document.createElement('div');
+                                    radioWrapper.className = 'col md-2 form-check form-check-inline';
+
+                                    const radioInput = document.createElement('input');
+                                    radioInput.className = 'form-check-input';
+                                    radioInput.type = 'radio';
+                                    radioInput.name = 'sample-number';
+                                    radioInput.id = `sample-number-${buttonCount}`;
+                                    radioInput.value = buttonCount;
+                                    radioInput.required = true;
+
+                                    const radioLabel = document.createElement('label');
+                                    radioLabel.className = 'form-check-label';
+                                    radioLabel.htmlFor = `sample-number-${buttonCount}`;
+                                    radioLabel.textContent = buttonCount;
+
+                                    radioWrapper.appendChild(radioInput);
+                                    radioWrapper.appendChild(radioLabel);
+                                    rowDiv.appendChild(radioWrapper);
+
+                                    buttonCount++;
+                                }
+
+                                sampleNumberContainer.appendChild(rowDiv);
+                            }
+                        }
+                    </script>
                     <!-- Options -->
                     <div class="mb-3">
                         <label class="form-label">Options</label><br>
@@ -204,7 +252,7 @@
             event.preventDefault();
 
             const itemName = itemNameInput.value.trim();
-            const sampleNumber = sampleNumberInput.value.trim();
+            const sampleNumber = document.querySelector('input[name="sample-number"]:checked');
             const selectedOptions = Array.from(document.querySelectorAll('input[name="options"]:checked'))
                 .map(option => option.value);
 
@@ -216,7 +264,7 @@
             const optionsText = selectedOptions.length ? `Options: ${selectedOptions.join(', ')}` : '';
             const newItem = {
                 itemName: itemName,
-                sampleNumber: sampleNumber,
+                sampleNumber: sampleNumber.value,
                 optionsText: optionsText
             };
 
@@ -225,7 +273,7 @@
 
             // Clear the input fields
             itemNameInput.value = '';
-            sampleNumberInput.value = '';
+            sampleNumber.checked = false;
             document.querySelectorAll('input[name="options"]:checked').forEach(option => option.checked = false);
         });
 
