@@ -258,7 +258,7 @@ void rotateMotor(long pulseCount) {
  */
 void gripper_grab(bool isGrabOn) {
   if (isGrabOn) {
-    moveServo(30);
+    moveServo(45);
   } else {
     moveServo(0);
   }

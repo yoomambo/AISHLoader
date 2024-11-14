@@ -7,13 +7,19 @@ logging.basicConfig(
     datefmt='%y-%m-%d %H:%M:%S'
 )
 
+class StateError(Exception):
+    """Exception raised for invalid state errors."""
+    def __init__(self, message="Invalid state occurred"):
+        self.message = message
+        super().__init__(self.message)
+
 class CommunicationError(Exception):
     """Exception raised for communication-related errors."""
     def __init__(self, message="Communication error occurred"):
         self.message = message
         super().__init__(self.message)
 
-class CommunicationErrorChecker:
+class ErrorChecker:
     # Class variable to keep track of whether the system is halted and asking for user confirmation
     is_halted = False  
     get_state = lambda: None
@@ -26,10 +32,10 @@ class CommunicationErrorChecker:
         Args:
             callback (function): A function that returns additional state information when a communication error occurs.
         """
-        CommunicationErrorChecker.get_state = new_get_state 
+        ErrorChecker.get_state = new_get_state 
 
     @staticmethod
-    def confirm_action(get_state = None):
+    def user_confirm_action(get_state = None):
         """
         A decorator that handles `CommunicationError` exceptions by prompting the user 
         to confirm if an action completed successfully. If the action fails, it re-raises 
@@ -47,7 +53,7 @@ class CommunicationErrorChecker:
         # If get_state is not provided, use the default get_state method
         # otherwise, use the provided get_state method, but only for this instance of the decorator
         if get_state is None:
-            get_state = CommunicationErrorChecker.get_state
+            get_state = ErrorChecker.get_state
 
         def decorator(func):
             @wraps(func)
@@ -66,6 +72,8 @@ class CommunicationErrorChecker:
                     else:
                         logging.error("Action did not complete successfully. Raising exception and exiting.")
                         raise e
+                except StateError as e:
+                    logging.error(f"State Error: {e}")
                 except Exception as e:
                     logging.error(f"Error not related to communication, so uncaught:")
                     raise e
@@ -76,14 +84,14 @@ class CommunicationErrorChecker:
         return decorator
 
 
-@CommunicationErrorChecker.confirm_action(None)
-def commerror_tester(throwerror):
-    if throwerror:
-        raise CommunicationError("Test error")
-    else:
-        print("No error thrown")
+# @ErrorChecker.user_confirm_action(None)
+# def commerror_tester(throwerror):
+#     if throwerror:
+#         raise CommunicationError("Test error")
+#     else:
+#         print("No error thrown")
 
 
-commerror_tester(False)
-commerror_tester(True)
+# commerror_tester(False)
+# commerror_tester(True)
 

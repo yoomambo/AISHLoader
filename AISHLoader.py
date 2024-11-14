@@ -1,6 +1,7 @@
 from Ender3 import Ender3
 from ArduinoHardware import ArduinoHardware
 from StateTracker import StateTracker
+from AISH_utils import ErrorChecker, CommunicationError, StateError
 import time
 import logging
 
@@ -26,9 +27,21 @@ class AISHLoader(StateTracker):
 
         # State variable to keep track of whether a sample is loaded or not
         self.SAMPLE_LOADED = None     
-        
 
+        #Override the get_state method from the StateTracker class, put this at the end to override the overrides 
+        #from the Ender3 and Arduino classes
+        ErrorChecker.set_get_state_callback(self.get_state)
 
+    def get_state(self):
+        return {
+            'sample_loaded': self.SAMPLE_LOADED,
+            'allow_movement': self.ALLOW_MOVEMENT,
+
+            'ender3': self.ender3.get_state(),
+            'arduino': self.arduino.get_state(), #Arduino should return the state of the gripper and linear rail inside
+        }
+
+    @ErrorChecker.user_confirm_action()
     def command(self, sample_num, xrd_params):
         """
         Executes a command to load a sample, run XRD, and unload the sample.
@@ -39,7 +52,7 @@ class AISHLoader(StateTracker):
             Exception: If movement is not allowed (self.ALLOW_MOVEMENT is False).
         """
         if self.ALLOW_MOVEMENT == False:
-            raise Exception('StateError: Movement is not allowed')
+            raise StateError('Movement is not allowed')
         
         self._track_state("COMMAND")
 
@@ -52,16 +65,7 @@ class AISHLoader(StateTracker):
         # Unload sample
         self.unload_sample()
 
-    def get_state(self):
-        return {
-            'sample_loaded': self.SAMPLE_LOADED,
-            'allow_movement': self.ALLOW_MOVEMENT,
-
-            'ender3': self.ender3.get_state(),
-            'stage': self.arduino.linear_rail.get_state(),
-            'gripper': self.arduino.gripper.get_state(),
-        }
-
+    @ErrorChecker.user_confirm_action()
     def home_ender(self):
         """
         Homes the Ender 3 printer.
@@ -70,12 +74,13 @@ class AISHLoader(StateTracker):
             Exception: If movement is not allowed.
         """
         if self.ALLOW_MOVEMENT == False:
-            raise Exception('StateError: Movement is not allowed')
+            raise StateError('Movement is not allowed')
         
         self._track_state("HOMING_ENDER")
 
         self.ender3.init_homing()
 
+    @ErrorChecker.user_confirm_action()
     def home_all(self):
         """
         Homes the linear rail and initializes the homing process for the Ender 3 printer.
@@ -94,7 +99,7 @@ class AISHLoader(StateTracker):
             Exception: If the maximum number of homing attempts is reached.
         """
         if self.ALLOW_MOVEMENT == False:
-            raise Exception('StateError: Movement is not allowed')
+            raise StateError('Movement is not allowed')
         
         self._track_state("HOMING")
 
@@ -116,7 +121,7 @@ class AISHLoader(StateTracker):
         
         print("Homing successful")
 
-
+    @ErrorChecker.user_confirm_action()
     def load_sample(self, sample_num):
         """
         Loads a sample onto the sample stage using the Ender3 and an Arduino-controlled gripper.
@@ -136,7 +141,6 @@ class AISHLoader(StateTracker):
         # Check state to see if sample is loaded already
         if self.SAMPLE_LOADED is not None:
             raise Exception('StateError: Sample already loaded')
-            return
         
         # Execute the procedure to load a sample
         #(1) Move 3D printer to sample in sample buffer
@@ -160,6 +164,7 @@ class AISHLoader(StateTracker):
 
         self.SAMPLE_LOADED = sample_num
     
+    @ErrorChecker.user_confirm_action()
     def unload_sample(self):
         """
         Unloads a sample from the furnace and returns it to its original storage position.
@@ -169,13 +174,13 @@ class AISHLoader(StateTracker):
             Exception: If no sample is loaded (self.SAMPLE_LOADED is None).
         """
         if self.ALLOW_MOVEMENT == False:
-            raise Exception('StateError: Movement is not allowed')
+            raise StateError('Movement is not allowed')
 
         self._track_state("UNLOAD_SAMPLE")
 
         # Check state to see if sample is loaded already
         if self.SAMPLE_LOADED is None:
-            raise Exception('StateError: No Sample loaded')
+            raise StateError('No sample loaded')
         
         #(1) Remove sample stage from furnace
         self.arduino.linear_rail.move_down()
@@ -198,6 +203,7 @@ class AISHLoader(StateTracker):
         self.ender3.move_to_rest()
         self.SAMPLE_LOADED = None
 
+    @ErrorChecker.user_confirm_action()
     def eject_sample_buffer(self, buffer_to_eject):
         """
         Change the state of the sample buffer.

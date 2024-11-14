@@ -6,7 +6,6 @@ print('\n\n\n')
 
 # Flask application
 app = Flask(__name__, static_url_path='/static')
-app.config['SERVER_NAME'] = 'localhost:5000'  # Replace with your server name and port
 
 # STATE VARIABLES
 IS_SAMPLE_LOADED = False
@@ -58,6 +57,52 @@ def load_sample(sample_num):
 def unload_sample():
     AISH.unload_sample()
 
+# Ender3 endpoints
+@app.route('/api/ender3/move_to_sample?<sample_num>', methods=['POST'])
+def ender3_move_to_sample(sample_num):
+    AISH.ender3.move_to_sample(sample_num)
+
+@app.route('/api/ender3/move_to_rest', methods=['POST'])
+def ender3_move_to_rest():
+    AISH.ender3.move_to_rest()
+
+@app.route('/api/ender3/move_to_home', methods=['POST'])
+def ender3_move_to_home():
+    AISH.ender3.move_to_home()
+
+@app.route('/api/ender3/move_to_stage', methods=['POST'])
+def ender3_move_to_stage():
+    AISH.ender3.move_to_stage()
+
+@app.route('/api/ender3/move_eject_bed', methods=['POST'])
+def ender3_move_eject_bed():
+    AISH.ender3.move_eject_bed()
+
+@app.route('/api/ender3/home', methods=['POST'])
+def ender3_home():
+    AISH.ender3.init_homing()
+
+# Arduino endpoints
+@app.route('/api/arduino/gripper/open', methods=['POST'])
+def arduino_gripper_open():
+    AISH.arduino.open_gripper()
+
+@app.route('/api/arduino/gripper/close', methods=['POST'])
+def arduino_gripper_close():
+    AISH.arduino.close_gripper()
+
+@app.route('/api/arduino/linear_rail/move_up', methods=['POST'])
+def arduino_linrail_moveup():
+    AISH.arduino.move_up()
+
+@app.route('/api/arduino/linear_rail/move_down', methods=['POST'])
+def arduino_linrail_movedown():
+    AISH.arduino.move_down()
+
+@app.route('/api/arduino/linear_rail/home', methods=['POST'])
+def arduino_linrail_home():
+    AISH.arduino.init_homing()
+
 
     
 @app.route('/')
@@ -65,5 +110,5 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    print(f"App running at: http://{app.config['SERVER_NAME']}")
-    app.run(debug=True)
+    print(f"App running at: http://127.0.0.1:5000/")
+    app.run(host='127.0.0.1', port=5000, debug=True)

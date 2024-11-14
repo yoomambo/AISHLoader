@@ -3,7 +3,7 @@ import time
 from StateTracker import StateTracker
 import numpy as np
 import re
-from AISH_utils import CommunicationError, CommunicationErrorChecker
+from AISH_utils import CommunicationError, ErrorChecker
 
 import logging
 
@@ -16,7 +16,13 @@ logging.basicConfig(
 
 STAGE_POSITION = (200, 0, 30)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
 # List of sample positions (x,y,z) in Ender3 coordinates
-SAMPLE_POSITIONS = np.array( [(39.25, 177 - 39.75*i, 3) for i in range(5)]  + [(80, 177 - 39.75*i, 12) for i in range(5)] )
+# Row 1: 0 -> (39.1, 176.7, 3), 4 -> (40.1, 17.4, 3), these are found center positions (have +/-0.3mm tolerance)
+# Row 2: 5 -> , 9 ->
+pos_0 = np.array([39.1, 176.7, 3])
+pos_4 = np.array([40.1, 17.4, 3])
+SAMPLE_POSITIONS = np.linspace(pos_0, pos_4, num=5)
+print(SAMPLE_POSITIONS)
+
 SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples
 
 ENDER_LIMITS = [(0, 220), (0, 220), (0, 250)]
@@ -44,7 +50,7 @@ class Ender3(StateTracker):
         self.init_homing()
 
         # Set the callback function for the CommunicationErrorChecker
-        CommunicationErrorChecker.set_get_state_callback(self.get_state)
+        ErrorChecker.set_get_state_callback(self.get_state)
         
 
     def move_to_sample(self, sample_num):
@@ -68,6 +74,8 @@ class Ender3(StateTracker):
         """
         Moves the device to the stage position in a three-step process to avoid collisions and enable sample pickup.
         This method uses predefined constants for the stage position and a Z-axis offset to ensure safe movements.
+
+        There is a ~0.6mm x 0.6mm tolerance in XY for picking up the sample.
 
         Raises:
             Any exceptions raised by the _move_to or _track_state methods.
@@ -159,14 +167,14 @@ class Ender3(StateTracker):
         
         logging.info("Ender3 - Homing routine complete")
     
-    @CommunicationErrorChecker.confirm_action()
+    @ErrorChecker.user_confirm_action()
     def _move_to(self, x, y, z, speed=2000):
         #Calculate the distance to move, time to set the timeout
         distances = np.array( [(x - self.current_position[0]), (y - self.current_position[1]), (z - self.current_position[2])] )
         MAX_TIMEOUT = max( np.abs(distances)/ENDER_MAX_SPEED *60 ) + 10
         # print(f"Distance: {distances}, Time: {MAX_TIMEOUT}")
 
-        logging.debug(f"Ender3 - Starting move to {float(x), float(y), float(z)} from {self.current_position}")
+        logging.debug(f"Ender3 - Starting move from {self.current_position} to {float(x), float(y), float(z)}")
         self.serial.write(str.encode(f"G01 X{x} Y{y} Z{z} F{speed}\r\n"))   # Gcode to move to XYZ
         #Wait for the move to complete
         self._wait_for_response(MAX_TIMEOUT)
@@ -177,7 +185,7 @@ class Ender3(StateTracker):
 
         logging.debug(f"Ender3 - Moved to:  {float(x), float(y), float(z)}")
 
-    @CommunicationErrorChecker.confirm_action()
+    @ErrorChecker.user_confirm_action()
     def _update_current_position(self):
         # Gcode to get current position
         self.serial.write(str.encode("M114\n"))

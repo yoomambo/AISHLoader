@@ -8,7 +8,7 @@ import pyfirmata
 import time
 from StateTracker import StateTracker
 import logging
-from AISH_utils import CommunicationError, CommunicationErrorChecker
+from AISH_utils import CommunicationError, ErrorChecker
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -52,10 +52,16 @@ class ArduinoHardware:
         self.linear_rail = self.LinearRail(self.board)
 
         # Set the callback function for the CommunicationErrorChecker
-        CommunicationErrorChecker.set_get_state_callback(self.get_state)
+        ErrorChecker.set_get_state_callback(self.get_state)
 
         self.gripper.open()  # Release the gripper on initialization
         self.linear_rail.home() # Home the linear rail on initialization
+
+    def get_state(self):
+        return {
+            'gripper': self.gripper.get_state(),
+            'linear_rail': self.linear_rail.get_state()
+        }
 
     # Default callback function for handling SysEx messages. Parses the data and converts it to a list of bytes
     def _default_callback(self, *data):
@@ -95,13 +101,14 @@ class ArduinoHardware:
             self._linrail_move_success = None       # Stores the success of the move operation
 
             # Set the callback function for the CommunicationErrorChecker
-            CommunicationErrorChecker.set_get_state_callback(self.get_state)
+            ErrorChecker.set_get_state_callback(self.get_state)
         
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def move_up(self):
             self._track_state("MOVE_UP")
             #First check if it is already at the top
             count = self.check_count()
+            print(count)
             if count >= 74*self.RAIL_STEPS_PER_REV:
                 return False
 
@@ -119,7 +126,7 @@ class ArduinoHardware:
             logging.info("Arduino - Linear Rail - Moved up")
             return self._linrail_move_success            
 
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def move_down(self):
             self._track_state("MOVE_DOWN")
             #First check if it is already at the bottom
@@ -141,7 +148,7 @@ class ArduinoHardware:
             logging.info("Arduino - Linear Rail - Moved down")
             return self._linrail_move_success
 
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def home(self):
             self._track_state("HOMING")
             self._linrail_home_success = None
@@ -158,7 +165,7 @@ class ArduinoHardware:
             logging.info(f"Arduino - Linear Rail - Homing successful {self._linrail_home_success}")
             return self._linrail_home_success
 
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def check_count(self):
             self._linrail_count = None
             self.board.send_sysex(LINRAIL_COUNT, [])
@@ -225,9 +232,9 @@ class ArduinoHardware:
             self._gripper_move_success = None;  # Stores the success of the grab operation
 
             # Set the callback function for the CommunicationErrorChecker
-            CommunicationErrorChecker.set_get_state_callback(self.get_state)
+            ErrorChecker.set_get_state_callback(self.get_state)
         
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def close(self):
             self._track_state("MOVE_GRAB")
             self._gripper_move_success = None
@@ -245,7 +252,7 @@ class ArduinoHardware:
             
             return self._gripper_move_success
         
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def open(self):
             self._track_state("MOVE_RELEASE")
             self._gripper_move_success = None
@@ -263,7 +270,7 @@ class ArduinoHardware:
 
             return self._gripper_move_success
         
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def check_state(self):
             self._gripper_is_grabbed = None
             self.board.send_sysex(GRIPPER_STATE, [])
@@ -280,7 +287,7 @@ class ArduinoHardware:
             
             return self._gripper_is_grabbed
         
-        @CommunicationErrorChecker.confirm_action()
+        @ErrorChecker.user_confirm_action()
         def check_angle(self):
             self._gripper_servo_angle = None
             self.board.send_sysex(GRIPPER_STATE_ANGLE, [])
