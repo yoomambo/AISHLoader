@@ -108,8 +108,9 @@ class ArduinoHardware:
             self._track_state("MOVE_UP")
             #First check if it is already at the top
             count = self.check_count()
-            print(count)
-            if count >= 74*self.RAIL_STEPS_PER_REV:
+            if count >= (74*self.RAIL_STEPS_PER_REV) - 10*self.RAIL_STEPS_PER_REV:
+                logging.error("Linear Rail - Already at the top, cannot move up")
+                self.check_count()  #Run to output the count
                 return False
 
             self._linrail_move_success = None
@@ -124,6 +125,8 @@ class ArduinoHardware:
                 raise CommunicationError("Linear Rail - Timeout, Move up failed")
             
             logging.info("Arduino - Linear Rail - Moved up")
+            self.check_count()  #Run to output the count
+
             return self._linrail_move_success            
 
         @ErrorChecker.user_confirm_action()
@@ -132,6 +135,8 @@ class ArduinoHardware:
             #First check if it is already at the bottom
             count = self.check_count()
             if count <= 0:
+                logging.error("Linear Rail - Already at the bottom, cannot move down")
+                self.check_count()  #Run to output the count
                 return False
 
             self._linrail_move_success = None
@@ -146,6 +151,8 @@ class ArduinoHardware:
                 raise CommunicationError("Linear Rail - Timeout, Move down failed")
             
             logging.info("Arduino - Linear Rail - Moved down")
+            self.check_count()  #Run to output the count
+
             return self._linrail_move_success
 
         @ErrorChecker.user_confirm_action()
@@ -165,7 +172,6 @@ class ArduinoHardware:
             logging.info(f"Arduino - Linear Rail - Homing successful {self._linrail_home_success}")
             return self._linrail_home_success
 
-        @ErrorChecker.user_confirm_action()
         def check_count(self):
             self._linrail_count = None
             self.board.send_sysex(LINRAIL_COUNT, [])
