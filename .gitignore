@@ -2,6 +2,6 @@ test.ipynb
 ender3test.ipynb
 pyfirmata_test.py
 /localproject
-.venv
+/.venv
 .gitignore
 __pycache__
