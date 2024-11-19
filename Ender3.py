@@ -20,7 +20,7 @@ pos_0 = np.array([39.1, 176.7, 3]) # Row 1, these are found center positions (ha
 pos_4 = np.array([40.1, 17.4, 3])
 pos_5 = np.array([0,0,0]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
 pos_9 = np.array([0,0,0])
-SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0))
+SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0)
 print(SAMPLE_POSITIONS)
 
 SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples

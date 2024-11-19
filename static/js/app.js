@@ -19,6 +19,37 @@ const sortable = new Sortable(queueList, {
     }
 });
 
+$(document).ready(function () {
+    // Initialize Bootstrap tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
+    // Bind Button callbacks
+    // Queue
+    $('#queue-form').on('submit', handle_button_queueAdd);
+    $('#queue-start-button').on('click', handle_button_queueStart);
+
+    // Manual Control (AISH Sample Loader)
+    $('#manualControl-loadButton').on('click', handle_button_manualLoading);
+    $('#manualControl-unloadButton').on('click', handle_button_manualUnloading);
+
+    // Ender3 Control
+    $('#ender3-moveToSampleButton').on('click', handle_button_moveToSample);
+    $('#ender3-moveToRestButton').on('click', handle_button_moveToRest);
+    $('#ender3-moveToHomeButton').on('click', handle_button_moveToHome);
+    $('#ender3-moveToStageButton').on('click', handle_button_moveToStage);
+    $('#ender3-moveEjectBedButton').on('click', handle_button_moveEjectBed);
+    $('#ender3-homeButton').on('click', handle_button_homeEnder3);
+
+    // Arduino Control
+    $('#arduino-gripper-open').on('click', handle_button_arduinoGripperOpen);
+    $('#arduino-gripper-close').on('click', handle_button_arduinoGripperClose);
+    $('#arduino-linrail-move-up').on('click', handle_button_arduinoLinrailMoveUp);
+    $('#arduino-linrail-move-down').on('click', handle_button_arduinoLinrailMoveDown);
+    $('#arduino-linrail-home').on('click', handle_button_arduinoLinrailHome);
+
+
+});
+
 // Function to render the queue items in the sortable list
 function renderQueue() {
     queueList.innerHTML = ''; // Clear the list before rendering
@@ -48,15 +79,16 @@ function renderQueue() {
     });
 }
 
-document.getElementById('queue-form').addEventListener('submit', function (event) {
+function handle_button_queueAdd(event) {
     event.preventDefault();
 
-    const itemName = itemNameInput.value.trim();
-    const sampleNumber = document.querySelector('input[name="sample-number"]:checked');
-    const selectedOptions = Array.from(document.querySelectorAll('input[name="options"]:checked'))
-        .map(option => option.value);
+    const itemName = $.trim(itemNameInput.value);
+    const sampleNumber = $('input[name="sample-number"]:checked');
+    const selectedOptions = $('input[name="options"]:checked').map(function () {
+        return this.value;
+    }).get();
 
-    if (!itemName || !sampleNumber) {
+    if (!itemName || !sampleNumber.length) {
         alert('Please fill out all fields.');
         return;
     }
@@ -64,7 +96,7 @@ document.getElementById('queue-form').addEventListener('submit', function (event
     const optionsText = selectedOptions.length ? `Options: ${selectedOptions.join(', ')}` : '';
     const newItem = {
         itemName: itemName,
-        sampleNumber: sampleNumber.value,
+        sampleNumber: sampleNumber.val(),
         optionsText: optionsText
     };
 
@@ -73,62 +105,258 @@ document.getElementById('queue-form').addEventListener('submit', function (event
 
     // Clear the input fields
     itemNameInput.value = '';
-    sampleNumber.checked = false;
-    document.querySelectorAll('input[name="options"]:checked').forEach(option => option.checked = false);
-});
+    $('input[name="options"]:checked').prop('checked', false);
 
-startButton.addEventListener('click', function () {
+    // Uncheck the current sample number and check the next one
+    sampleNumber.prop('checked', false);
+    const nextSample = $(`input[name="sample-number"][value="${parseInt(sampleNumber.val()) + 1}"]`);
+    
+    // If the next sample exists, check it; otherwise, check the first sample again
+    if (nextSample.length) {
+        nextSample.prop('checked', true);
+    } else {
+        $('input[name="sample-number"][value="0"]').prop('checked', true);
+    }
+}
+
+
+function handle_button_queueStart() {
     if (queueItems_array.length > 0) {
         const currentItem = queueItems_array.shift(); // Remove the first item from the queue
         runningItemDiv.innerHTML = `
-                <div class="flex-grow-1">
-                    <span class="item-name">${currentItem.itemName}</span><br>
-                    <span class="item-details">Sample Number: ${currentItem.sampleNumber} ${currentItem.optionsText}</span>
-                </div>
-            `; // Display in Currently Running box
+            <div class="flex-grow-1">
+                <span class="item-name">${currentItem.itemName}</span><br>
+                <span class="item-details">Sample Number: ${currentItem.sampleNumber} ${currentItem.optionsText}</span>
+            </div>
+        `; // Display in Currently Running box
         renderQueue(); // Re-render the queue to reflect changes
     } else {
         alert('No items in the queue to start.');
     }
-});
+}
+
+//////////////////////////////////////////////
+// Manual Control (AISH Sample Loader)
 
 // Manual Loading
-document.getElementById('manualControl-autoLoadForm').addEventListener('submit', function (event) {
+function handle_button_manualLoading(event) {
     event.preventDefault();
+    console.log('Load button clicked');
 
-    // Get the sample number from the selected radio button
-    const sampleNumber = document.querySelector('input[name="sample-number"]:checked').value;
-
-    //Send a flask post request to the server
-    fetch(`/api/load_sample?${sampleNumber}`, {
+    // Get the selected radio button value from the specific container
+    const sampleNumber = $('#manualControl-samplePos input[name="sample-number"]:checked').val();
+    
+    $.ajax({
+        url: '/api/load_sample',
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+        contentType: 'application/json',
+        data: JSON.stringify({ sample_num: sampleNumber }),  // Send sample number in JSON
+        success: function (data) {
+            console.log('Load Button Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error: ', error);
         }
-    })
-    .then(response => response.json())
-    .then(data => {
     });
-});
+}
 
 // Manual Unloading
-document.getElementById('manualControl-unloadButton').addEventListener('click', function () {
-    //Send a flask post request to the server
-    fetch('/api/unload_sample', {
+function handle_button_manualUnloading(event) {
+    event.preventDefault();
+    $.ajax({
+        url: '/api/unload_sample',
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Unload Button Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error: ', error);
         }
-    })
-    .then(response => response.json())
-    .then(data => {
     });
-});
+}
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Initialize tooltips for all elements with data-bs-toggle="tooltip"
-    var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-        new bootstrap.Tooltip(tooltipTriggerEl);
+//////////////////////////////////////////////
+// Ender3 Control
+
+function handle_button_moveToSample(event) {
+    event.preventDefault();
+    
+    // Get the selected radio button value from the specific container
+    const sampleNumber = $('#ender3-sampleNumber-container input[name="sample-number"]:checked').val();
+    
+    console.log('Move to Sample: ', sampleNumber);
+
+    $.ajax({
+        url: '/api/ender3/move_to_sample',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ sample_num: sampleNumber }),
+        success: function (data) {
+            console.log('Move to Sample Response: ', data);
+        }
     });
-});
+}
+
+function handle_button_moveToRest(event) {
+    event.preventDefault();
+    console.log('Move to Rest Position');
+
+    $.ajax({
+        url: '/api/ender3/move_to_rest',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Move to Rest Response: ', data);
+        }
+    });
+}
+
+function handle_button_moveToHome(event) {
+    event.preventDefault();
+    console.log('Move to Home Position');
+
+    $.ajax({
+        url: '/api/ender3/move_to_home',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Move to Home Response: ', data);
+        }
+    });
+}
+
+function handle_button_moveToStage(event) {
+    event.preventDefault();
+    console.log('Move to Stage Position');
+
+    $.ajax({
+        url: '/api/ender3/move_to_stage',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Move to Stage Response: ', data);
+        }
+    });
+}
+
+function handle_button_moveEjectBed(event) {
+    event.preventDefault();
+    console.log('Eject Bed');
+
+    $.ajax({
+        url: '/api/ender3/move_eject_bed',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Eject Bed Response: ', data);
+        }
+    });
+}
+
+function handle_button_homeEnder3(event) {
+    event.preventDefault();
+    console.log('Home Ender3');
+
+    $.ajax({
+        url: '/api/ender3/home',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Home Ender3 Response: ', data);
+        }
+    });
+}
+
+//////////////////////////////////////////////
+// Arduino Control
+
+// Callback function to open the Arduino gripper
+function handle_button_arduinoGripperOpen(event) {
+    event.preventDefault();
+    console.log('Arduino Gripper Open button clicked');
+    
+    $.ajax({
+        url: '/api/arduino/gripper/open',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Gripper Open Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error opening gripper: ', error);
+        }
+    });
+}
+
+// Callback function to close the Arduino gripper
+function handle_button_arduinoGripperClose(event) {
+    event.preventDefault();
+    console.log('Arduino Gripper Close button clicked');
+    
+    $.ajax({
+        url: '/api/arduino/gripper/close',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Gripper Close Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error closing gripper: ', error);
+        }
+    });
+}
+
+// Callback function to move the Arduino linear rail up
+function handle_button_arduinoLinrailMoveUp(event) {
+    event.preventDefault();
+    console.log('Arduino Linear Rail Move Up button clicked');
+    
+    $.ajax({
+        url: '/api/arduino/linear_rail/move_up',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Linear Rail Move Up Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error moving linear rail up: ', error);
+        }
+    });
+}
+
+// Callback function to move the Arduino linear rail down
+function handle_button_arduinoLinrailMoveDown(event) {
+    event.preventDefault();
+    console.log('Arduino Linear Rail Move Down button clicked');
+    
+    $.ajax({
+        url: '/api/arduino/linear_rail/move_down',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Linear Rail Move Down Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error moving linear rail down: ', error);
+        }
+    });
+}
+
+// Callback function to home the Arduino linear rail
+function handle_button_arduinoLinrailHome(event) {
+    event.preventDefault();
+    console.log('Arduino Linear Rail Home button clicked');
+    
+    $.ajax({
+        url: '/api/arduino/linear_rail/home',
+        method: 'POST',
+        contentType: 'application/json',
+        success: function (data) {
+            console.log('Linear Rail Home Response: ', data);
+        },
+        error: function (xhr, status, error) {
+            console.error('Error homing linear rail: ', error);
+        }
+    });
+}
