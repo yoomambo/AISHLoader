@@ -4,4 +4,4 @@ pyfirmata_test.py
 /localproject
 /.venv
 .gitignore
-__pycache__
+/__pycache__
