@@ -12,4 +12,5 @@ pyfirmata_test.py
 test.ipynb
 test.py
 gripper_hardwaretest.py
+ArduinoHardwareTest.py
 /localproject
