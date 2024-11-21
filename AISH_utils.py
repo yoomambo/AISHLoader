@@ -62,6 +62,7 @@ class ErrorChecker:
                     func(*args, **kwargs)
                 except CommunicationError as e:
                     logging.error(f"Communication Error: {e}")
+                    is_halted = True    # Set the halt flag to True
 
                     state_info = get_state()
                     logging.info(f"Current state: {state_info}")
@@ -80,6 +81,8 @@ class ErrorChecker:
                 finally:
                     # Write cleanup code here
                     pass
+
+                is_halted = False       # We have confirmed the action, so reset the halt flag
             return wrapper
         return decorator
 

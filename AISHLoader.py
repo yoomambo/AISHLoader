@@ -36,6 +36,7 @@ class AISHLoader(StateTracker):
         return {
             'sample_loaded': self.SAMPLE_LOADED,
             'allow_movement': self.ALLOW_MOVEMENT,
+            'error_halt': ErrorChecker.is_halted,       #Flag to indicate if the system is halted to ask for user confirmation
 
             'ender3': self.ender3.get_state(),
             'arduino': self.arduino.get_state(), #Arduino should return the state of the gripper and linear rail inside
