@@ -2,6 +2,12 @@ test.ipynb
 ender3test.ipynb
 pyfirmata_test.py
 /localproject
-.venv
-.gitignore
-/__pycache__
+
+
+# Ignore Python bytecode and cache
+__pycache__/
+*.pyc
+
+# Ignore virtual environments
+.venv/
+venv/
