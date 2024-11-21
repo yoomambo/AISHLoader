@@ -1,0 +1,15 @@
+# Ignore Python bytecode and cache
+__pycache__/
+*.pyc
+
+# Ignore virtual environments
+.venv/
+venv/
+
+.DS_Store
+ender3test.ipynb
+pyfirmata_test.py
+test.ipynb
+test.py
+gripper_hardwaretest.py
+/localproject
