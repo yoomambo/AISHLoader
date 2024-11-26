@@ -18,7 +18,7 @@ STAGE_POSITION = (200, 0, 30)  #Position of the stage in Ender3 coordinates (onl
 # List of sample positions (x,y,z) in Ender3 coordinates
 pos_0 = np.array([39.1, 176.7, 3]) # Row 1, these are found center positions (have +/-0.3mm tolerance)
 pos_4 = np.array([40.1, 17.4, 3])
-pos_5 = np.array([0,0,0]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
+pos_5 = np.array([79.65, 177.0, 12.0]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
 pos_9 = np.array([0,0,0])
 SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0)
 print(SAMPLE_POSITIONS)

@@ -1,6 +1,7 @@
 from functools import wraps
 import logging
 
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",

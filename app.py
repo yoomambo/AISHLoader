@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, render_template, request
 from AISHLoader import AISHLoader
 import logging
+import os
 
 print('\n\n\n')
 
@@ -14,7 +15,7 @@ logging.basicConfig(
 
 # Flask application
 app = Flask(__name__, static_url_path='/static')
-TEST_MODE = True
+WEBSITE_TEST_MODE = False
 
 # STATE VARIABLES
 IS_SAMPLE_LOADED = False
@@ -23,16 +24,21 @@ SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
 
 # HARDWARE VARIABLES
-PORT_ENDER = '/dev/tty.usbmodem1401'
-PORT_ARDUINO = '/dev/tty.usbmodem1201'
-try: 
-    AISH = AISHLoader(PORT_ENDER, PORT_ARDUINO)
-except:
-    if TEST_MODE:
-        AISH = None
+PORT_ENDER = '/dev/tty.usbmodem1111101'
+PORT_ARDUINO = '/dev/tty.usbmodem1111201'
+# Initialize AISHLoader only if not in the reloader
+if os.environ.get('FLASK_RUN_MAIN') != 'true':
+    if not WEBSITE_TEST_MODE:
+        try: 
+            AISH = AISHLoader(PORT_ENDER, PORT_ARDUINO)
+        except:
+            raise Exception("Failed to connect to hardware")
     else:
-        raise Exception("Failed to connect to hardware")
-    
+        AISH = None
+logging.info("AISHLoader initialized")
+
+# Endpoint to get the state of the automated In-situ heating XRD loader
+# Intended use is for the frontend to poll the state of the system
 @app.route('/api/get_state', methods=['POST'])
 def get_state():
     '''
@@ -40,6 +46,7 @@ def get_state():
     '''
     return jsonify(AISH.get_state())
 
+# Endpoints to eject/load sample buffer 
 @app.route('/api/loading_sample_buffer', methods=['POST'])
 def loading_sample_buffer():
     AISH.eject_sample_buffer(True)
@@ -60,6 +67,13 @@ def command_package():
     xrd_params = request.json['xrd_params']
     AISH.command()
 
+@app.route('/api/abort', methods=['POST'])
+def abort():
+    #Stop XRD acquisition
+
+    # Unload the sample
+    
+    pass
 
 ############################################################################################################
 # MANUAL OPERATION ENDPOINTS
@@ -67,64 +81,80 @@ def command_package():
 @app.route('/api/load_sample', methods=['POST'])
 def load_sample():
     data = request.get_json()  # Parse incoming JSON data
-    sample_num = data.get('sample_num')  # Extract sample number
+    sample_num = int(data.get('sample_num'))  # Extract sample number
 
     logging.info(f"Loading sample {sample_num}")
 
-    # AISH.load_sample(sample_num)
+    if not WEBSITE_TEST_MODE:
+        AISH.load_sample(sample_num)
+        
     return jsonify({"success": True, "sample_num": sample_num})
 
 @app.route('/api/unload_sample', methods=['POST'])
 def unload_sample():
     logging.info("Unloading sample")
 
-    # AISH.unload_sample()
+    if not WEBSITE_TEST_MODE:
+        AISH.unload_sample()
+        
     return jsonify({"success": True})
 
 # Ender3 endpoints ############################################################################################################
 @app.route('/api/ender3/move_to_sample', methods=['POST'])
 def ender3_move_to_sample():
     data = request.get_json()  # Parse incoming JSON data
-    sample_num = data.get('sample_num')  # Extract sample number
+    sample_num = int(data.get('sample_num'))  # Extract sample number
 
     logging.debug(f"Received request to move Ender3 to sample {sample_num}")
 
-    # AISH.ender3.move_to_sample(sample_num)
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.move_to_sample(sample_num)
+        
     return jsonify({"success": True, "sample_num": sample_num})
 
 @app.route('/api/ender3/move_to_rest', methods=['POST'])
 def ender3_move_to_rest():
     logging.debug("Received request to move Ender3 to rest position")
 
-    # AISH.ender3.move_to_rest()
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.move_to_rest()
+        
     return jsonify({"success": True})
 
 @app.route('/api/ender3/move_to_home', methods=['POST'])
 def ender3_move_to_home():
     logging.debug("Received request to move Ender3 to home position")
 
-    # AISH.ender3.move_to_home()
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.move_to_home()
+        
     return jsonify({"success": True})
 
 @app.route('/api/ender3/move_to_stage', methods=['POST'])
 def ender3_move_to_stage():
     logging.debug("Received request to move Ender3 to stage position")
 
-    # AISH.ender3.move_to_stage()
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.move_to_stage()
+        
     return jsonify({"success": True})
 
 @app.route('/api/ender3/move_eject_bed', methods=['POST'])
 def ender3_move_eject_bed():
     logging.debug("Received request to move Ender3 to eject bed")
 
-    # AISH.ender3.move_eject_bed()
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.move_eject_bed()
+        
     return jsonify({"success": True})
 
 @app.route('/api/ender3/home', methods=['POST'])
 def ender3_home():
     logging.debug("Received request to home Ender3")
 
-    # AISH.ender3.init_homing()
+    if not WEBSITE_TEST_MODE:
+        AISH.ender3.init_homing()
+        
     return jsonify({"success": True})
 
 # Arduino endpoints ############################################################################################################
@@ -132,35 +162,45 @@ def ender3_home():
 def arduino_gripper_open():
     logging.debug("Received request to open Arduino gripper")
 
-    # AISH.arduino.open_gripper()
+    if not WEBSITE_TEST_MODE:
+        AISH.arduino.gripper.open()
+        
     return jsonify({"success": True})
 
 @app.route('/api/arduino/gripper/close', methods=['POST'])
 def arduino_gripper_close():
     logging.debug("Received request to close Arduino gripper")
 
-    # AISH.arduino.close_gripper()
+    if not WEBSITE_TEST_MODE:
+        AISH.arduino.gripper.close()
+        
     return jsonify({"success": True})
 
 @app.route('/api/arduino/linear_rail/move_up', methods=['POST'])
 def arduino_linrail_moveup():
     logging.debug("Received request to move Arduino linear rail up")
 
-    # AISH.arduino.move_up()
+    if not WEBSITE_TEST_MODE:
+        AISH.arduino.linear_rail.move_up()
+        
     return jsonify({"success": True})
 
 @app.route('/api/arduino/linear_rail/move_down', methods=['POST'])
 def arduino_linrail_movedown():
     logging.debug("Received request to move Arduino linear rail down")
 
-    # AISH.arduino.move_down()
+    if not WEBSITE_TEST_MODE:
+        AISH.arduino.linear_rail.move_down()
+        
     return jsonify({"success": True})
 
 @app.route('/api/arduino/linear_rail/home', methods=['POST'])
 def arduino_linrail_home():
     logging.debug("Received request to home Arduino linear rail")
 
-    # AISH.arduino.init_homing()
+    if not WEBSITE_TEST_MODE:
+        AISH.arduino.linear_rail.home()
+        
     return jsonify({"success": True})
 
 
@@ -171,4 +211,4 @@ def index():
 
 if __name__ == '__main__':
     print(f"App running at: http://127.0.0.1:5000/")
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False)
