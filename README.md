@@ -18,6 +18,8 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+Connecting Serial
+The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections
 
 # Control Interface Guide
 `pass`
