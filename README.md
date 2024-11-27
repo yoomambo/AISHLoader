@@ -19,7 +19,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 Connecting Serial
-The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections
+The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
 
 # Control Interface Guide
 `pass`
