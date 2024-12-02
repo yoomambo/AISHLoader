@@ -26,8 +26,8 @@ SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
 
 # HARDWARE VARIABLES
-PORT_ENDER = '/dev/tty.usbmodem1111101'
-PORT_ARDUINO = '/dev/tty.usbmodem1111201'
+PORT_ENDER = '/dev/tty.usbmodem111101'
+PORT_ARDUINO = '/dev/tty.usbmodem111201'
 if not WEBSITE_TEST_MODE:
     try: 
         aish_loader = AISHLoader(PORT_ENDER, PORT_ARDUINO)
@@ -43,12 +43,12 @@ experiment_thread = ThreadPoolExecutor(max_workers=1)
 
 # Endpoint to get the state of the automated In-situ heating XRD loader
 # Intended use is for the frontend to poll the state of the system
-@app.route('/api/get_state', methods=['POST'])
+@app.route('/api/get_state', methods=['GET'])
 def get_state():
     '''
     Returns the state of the automated In-situ heating XRD loader
     '''
-    state = {'aish_loader': aish_loader.get_state(),
+    state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
              'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
     return jsonify(state)
 
@@ -77,8 +77,11 @@ def command():
     aish_experiment = AISHExperiment(xrd_params)
     def run_xrd(sample_num, xrd_params):
         aish_loader.load_sample(sample_num)
-        aish_experiment.run_xrd_sequence(xrd_params)
+        aish_experiment.run_sequence(xrd_params)
         aish_loader.unload_sample()
+
+        #Reset the experiment
+        aish_experiment = None
 
     # Submit the full routine to the executor
     experiment_thread.submit(run_xrd, sample_num, xrd_params)
@@ -88,10 +91,11 @@ def command():
 @app.route('/api/abort', methods=['POST'])
 def abort():
     #Stop XRD acquisition
+    aish_experiment.abort()
 
     # Unload the sample
     
-    pass
+    aish_experiment = None
 
 ############################################################################################################
 # MANUAL OPERATION ENDPOINTS

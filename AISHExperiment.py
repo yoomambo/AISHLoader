@@ -28,7 +28,8 @@ class Diffractometer:
         known_instruments = ['Bruker', 'Aeris', 'Post Hoc']
         assert self.instrument_name in known_instruments, 'Instrument is not known'
 
-    def execute_scan(self, min_angle, max_angle, prec, temp, spec_fname, init_step, init_time, final_step, final_time):
+    def execute_scan(self, min_angle, max_angle, prec, temp, spec_fname, 
+                     low_stepsize=0.02, low_time_per_step=0.1, high_stepsize=0.01, high_time_per_step=0.2):
 
         # High precision = slow scan
         # Low precision = fast scan
@@ -45,10 +46,6 @@ class Diffractometer:
         - Bruker D8 Advance
         - Panalytical Aeris     (not implemented here, deleted for brevity [bxl 241126])
 
-        We also have a "Post Hoc" setting where measurements were
-        performed beforehand and the adaptive algorithm learns
-        to interpolate between high- and low-precision data.
-
         For use with a different instrument, add code here.
         """
 
@@ -56,11 +53,11 @@ class Diffractometer:
 
             # Use these to set desired resolution
             if prec == 'High':
-                step_size = final_step # deg
-                time_per_step = final_time # sec
+                step_size = high_stepsize # deg
+                time_per_step = high_time_per_step # sec
             if prec == 'Low':
-                step_size = init_step # deg
-                time_per_step = init_time # sec
+                step_size = low_stepsize # deg
+                time_per_step = low_time_per_step # sec
 
             # Expected measurement time
             expec_time = time_per_step*(max_angle - min_angle)/step_size
@@ -143,8 +140,10 @@ class AISHExperiment:
         self.diffrac = Diffractometer('Bruker')
 
     def save_data(self, x, y, temp):
+        print("Saving")
         #Save the data to a file
         with open(f'./{self._SAVE_DIR}/{self.results_dir}/temp_{temp}.csv', 'w+') as f:
+            print("Opened")
             for (xval, yval) in zip(x,y):
                 f.write(f'{xval} {yval}\n')
         logging.info(f"Saved data for temperature {temp}")

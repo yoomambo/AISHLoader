@@ -145,6 +145,7 @@ class AISHLoader(StateTracker):
         
         # Execute the procedure to load a sample
         #(1) Move 3D printer to sample in sample buffer
+        self.arduino.gripper.open()
         self.ender3.move_to_sample(sample_num)
 
         #(2) Grab Sample with Gripper
@@ -188,6 +189,7 @@ class AISHLoader(StateTracker):
         # time.sleep(5)
 
         #(2) Move 3D printer to stage
+        self.arduino.gripper.open()
         self.ender3.move_to_stage()
 
         #(3) Grab Sample with Gripper

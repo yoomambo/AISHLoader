@@ -19,6 +19,13 @@ const sortable = new Sortable(queueList, {
     }
 });
 
+// setInterval(() => {
+//     $.get('/api/get_state', (data) => {
+//       console.log(data); // Handle the data received from the Flask endpoint
+//     });
+//   }, 2000);
+  
+
 $(document).ready(function () {
     // Initialize Bootstrap tooltips
     $('[data-bs-toggle="tooltip"]').tooltip();
@@ -47,6 +54,23 @@ $(document).ready(function () {
     $('#arduino-linrail-move-down').on('click', handle_button_arduinoLinrailMoveDown);
     $('#arduino-linrail-home').on('click', handle_button_arduinoLinrailHome);
 
+    // Enable Heating Section
+    // Toggle visibility of the temperature inputs and estimated time when checkbox is checked
+    $('#enable-temperature').on('change', function() {
+        const temperatureInputs = $('#temperature-inputs');
+        const estimatedTime = $('#estimated-time');
+        
+        if ($(this).is(':checked')) {
+            temperatureInputs.show();
+            estimatedTime.show();
+            calculateProcedureTime(); // Update time when section is shown
+        } else {
+            temperatureInputs.hide();
+            estimatedTime.hide(); // Hide the estimated time
+        }
+    });
+    // Add event listeners to update the estimated time when relevant fields change
+    $('#min-temperature, #max-temperature, #number-of-scans').on('input', calculateProcedureTime);
 
 });
 

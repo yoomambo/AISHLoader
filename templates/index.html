@@ -93,7 +93,7 @@
                                 </button>
 
                                 <button id="queue-stop-button" class="btn btn-danger mb-3" data-bs-toggle="tooltip"
-                                    data-bs-placement="bottom" title="Abort current and pause">
+                                    data-bs-placement="bottom" title="Abort current and pause (MUST MANUALLY UNLOAD)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                         class="bi bi-stop-fill" viewBox="0 0 16 16">
                                         <path
@@ -144,9 +144,85 @@
                     
                     <!-- XRD Parameters -->
                     <div class="mb-3">
-                        <label class="form-label">XRD Parameters</label><br>
-                        <input type="checkbox" id="option1" name="options" value="Run XRD"> Run XRD<br>
+                        <label class="form-label"><b>XRD Parameters</b></label><br>
+
+                        <!-- 2θ Range and Precision Input Section -->
+                        <div class="mb-3">
+                            <div class="row">
+                                <!-- Min angle -->
+                                <div class="col-md-4">
+                                    <label for="min-angle" class="form-label">Min 2θ</label>
+                                    <input type="number" class="form-control" id="min-angle" placeholder="Min 2θ" value=10 min=5 max=120 step="0.01">
+                                </div>
+
+                                <!-- Max angle -->
+                                <div class="col-md-4">
+                                    <label for="max-angle" class="form-label">Max 2θ</label>
+                                    <input type="number" class="form-control" id="max-angle" placeholder="Max 2θ" value=80 min=5 max=120 step="0.01">
+                                </div>
+
+                                <!-- Precision Selection -->
+                                <div class="col-md-4">
+                                    <label class="form-label">Precision</label>
+                                    <select class="form-select" id="precision-select">
+                                        <option value="Low">Low</option>
+                                        <option value="High">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enable Temperature Section (Checkbox) -->
+                        <div class="mb-3">
+                            <input type="checkbox" id="enable-temperature" name="enable-temperature" value="yes">
+                            <label for="enable-temperature" class="form-label" style="user-select: none;">Enable Heating</label>
+                        </div>
+
+                        <!-- Temperature Inputs (Hidden by default) -->
+                        <div id="temperature-inputs" style="display:none;">
+                            <!-- Row for Min temperature, Max temperature, and Number of Scans -->
+                            <div class="row">
+                                <!-- Min Temperature -->
+                                <div class="col-md-4">
+                                    <label for="min-temperature" class="form-label">Min Temperature (°C)</label>
+                                    <input type="number" class="form-control" value=25 id="min-temperature" placeholder="Min T">
+                                </div>
+
+                                <!-- Max Temperature -->
+                                <div class="col-md-4">
+                                    <label for="max-temperature" class="form-label">Max Temperature (°C)</label>
+                                    <input type="number" class="form-control" id="max-temperature" placeholder="Max T">
+                                </div>
+
+                                <!-- Number of Scans -->
+                                <div class="col-md-4">
+                                    <label for="number-of-scans" class="form-label">Number of Scans</label>
+                                    <input type="number" class="form-control" value=200 id="number-of-scans" placeholder="# scans">
+                                </div>
+                            </div>
+
+                           <!-- Row for Estimated Procedure Time -->
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <span id="estimated-time" style="display:inline;"></span> <!-- Displayed as inline text -->
+                                </div>
+                            </div>
+
+                            <!-- Row for Time Breakdown (Hidden by default) -->
+                            <div class="row mt-3" id="time-breakdown" style="display:none;">
+                                <div class="col-md-12">
+                                    <div style="font-size: 14px; font-weight: normal; line-height: 1.5;">
+                                        <div><strong>Breakdown:</strong></div>
+                                        <div id="scan-breakdown"></div>
+                                        <div id="ramp-breakdown"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+
+
                     <!-- Add to Queue Button -->
                     <button class="btn btn-primary">Add to Queue</button>
                 </form>
