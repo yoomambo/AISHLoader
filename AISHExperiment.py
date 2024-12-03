@@ -3,6 +3,7 @@ import random
 import time
 import os
 import logging
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(
@@ -10,6 +11,8 @@ logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",
     datefmt='%y-%m-%d %H:%M:%S'
 )
+
+RESULTS_FILE = r'C:\Users\9KKFWL2\Documents\Interfacing_Tests\Results\XRD.ascii'
 
 # Diffractometer class from Nathan's code: https://github.com/njszym/AdaptiveXRD
 # Copied only the relevant part to control the XRD, since the full code imports many machine learning libraries
@@ -20,16 +23,19 @@ class Diffractometer:
     types of diffractometers.
     """
 
-    def __init__(self, instrument_name, results_dir='Results'):
+    def __init__(self, instrument_name, results_dir=r'C:\Users\9KKFWL2\Documents\Interfacing_Tests\Results'):
         self.instrument_name = instrument_name
         self.results_dir = results_dir
+
+        # Clear the results file, if it exists
+        if os.path.exists(RESULTS_FILE):
+            os.remove(RESULTS_FILE)
 
         # You may add your own instrument here
         known_instruments = ['Bruker', 'Aeris', 'Post Hoc']
         assert self.instrument_name in known_instruments, 'Instrument is not known'
 
-    def execute_scan(self, min_angle, max_angle, prec, temp, spec_fname, 
-                     low_stepsize=0.02, low_time_per_step=0.1, high_stepsize=0.01, high_time_per_step=0.2):
+    def execute_scan(self, min_angle, max_angle, prec, temp, spec_fname, init_step=0.02, init_time=0.1, final_step=0.01, final_time=0.2):
 
         # High precision = slow scan
         # Low precision = fast scan
@@ -46,6 +52,10 @@ class Diffractometer:
         - Bruker D8 Advance
         - Panalytical Aeris     (not implemented here, deleted for brevity [bxl 241126])
 
+        We also have a "Post Hoc" setting where measurements were
+        performed beforehand and the adaptive algorithm learns
+        to interpolate between high- and low-precision data.
+
         For use with a different instrument, add code here.
         """
 
@@ -53,11 +63,11 @@ class Diffractometer:
 
             # Use these to set desired resolution
             if prec == 'High':
-                step_size = high_stepsize # deg
-                time_per_step = high_time_per_step # sec
+                step_size = final_step # deg
+                time_per_step = final_time # sec
             if prec == 'Low':
-                step_size = low_stepsize # deg
-                time_per_step = low_time_per_step # sec
+                step_size = init_step # deg
+                time_per_step = init_time # sec
 
             # Expected measurement time
             expec_time = time_per_step*(max_angle - min_angle)/step_size
@@ -67,7 +77,7 @@ class Diffractometer:
             tolerance = 600 # by default, allow 10 minutes
 
             # Write to params file; will be read by LabLims job file
-            with open('ScanParams.txt', 'w+') as f:
+            with open(r"C:\Users\9KKFWL2\Documents\Interfacing_Tests\ScanParams.txt", 'w+') as f:
                 f.write('start_angle;end_angle;step_size;time_per_step;\n')
                 f.write('%s;%s;%s;%s;' % (min_angle, max_angle, step_size, time_per_step))
 
@@ -105,7 +115,7 @@ class Diffractometer:
 
             # If scan was successful: load xy values
             x, y = [], []
-            with open('Results/XRD.ascii') as f:
+            with open(RESULTS_FILE) as f:
                 for line in f.readlines()[3:]:
                     x.append(float(line.split(';')[2]))
                     y.append(float(line.split(';')[-1]))
@@ -113,21 +123,24 @@ class Diffractometer:
             y = np.array(y)
 
             # Clean up results folder
-            os.remove('Results/XRD.ascii')
+            os.remove(RESULTS_FILE)
 
             return x, y
 
 # Creates an object to control the XRD, each object represents an AISH experiment
 class AISHExperiment:
     _SAVE_DIR = './AISH_results'
+    _MAX_TEMP = 1100
     
     def __init__(self, name, min_angle, max_angle, prec, temperatures):
-        self.results_dir = name
+        self.results_dir = f"{self._SAVE_DIR}/{name}"
         
         self.min_angle = min_angle
         self.max_angle = max_angle
         self.prec = prec
-        self.temperatures = temperatures
+        
+        #Ensure no temperatures are above 1100C
+        self.temperatures = [temp if temp <= self._MAX_TEMP else self._MAX_TEMP for temp in temperatures]
         self.temperatures.append(25) #Add room temperature to the end to cool down
 
         print(f"temperatures {self.temperatures}")
@@ -136,17 +149,6 @@ class AISHExperiment:
 
         self.ABORT = False
 
-        #Initialize the XRD controller from the adaptXRD module
-        self.diffrac = Diffractometer('Bruker')
-
-    def save_data(self, x, y, temp):
-        print("Saving")
-        #Save the data to a file
-        with open(f'./{self._SAVE_DIR}/{self.results_dir}/temp_{temp}.csv', 'w+') as f:
-            print("Opened")
-            for (xval, yval) in zip(x,y):
-                f.write(f'{xval} {yval}\n')
-        logging.info(f"Saved data for temperature {temp}")
 
     def run_sequence(self):
         for idx, temp in enumerate(self.temperatures):
@@ -154,46 +156,60 @@ class AISHExperiment:
                 #Update the progress
                 self.progress['cur_step'] = idx
                 self.progress['cur_temp'] = temp
-            
-                #Run the XRD scan, blocking call
-                x,y = self.diffrac.execute_scan(self.min_angle, self.max_angle, self.prec, temp, None)
-
-                #Save the data
-                self.save_data(x, y, temp)
+                logging.info(f"Executing scan at {temp}C, min 2theta: {self.min_angle}, max 2theta: {self.max_angle}")
+                
+                self._single_scan(temp)
             else:
                 logging.error("Experiment aborted")
-                self.progress['cur_temp'] = temp
-
-                #Run the XRD scan, blocking call, run to 25C to cool down
-                x,y = self.diffrac.execute_scan(self.min_angle, self.max_angle, self.prec, 25, None)
-                
-                #Save the data
-                self.save_data(x, y, 25)
-                
-                return
-        logging.info("XRD experiment complete")
-
-    def test_run_sequence(self):
-        for idx, temp in enumerate(self.temperatures):
-            if not self.ABORT:
-                #Update the progress
-                self.progress['cur_step'] = idx
-                self.progress['cur_temp'] = temp
-            
-                #Run the XRD scan, blocking call
-                time.sleep(5)
-                logging.info(f"XRD experiment at {temp}C")
-            else:
-                logging.error("Experiment aborted, cooling to 25C")
                 self.progress['cur_temp'] = 25
-                
-                #Run the XRD scan, blocking call, run to 25C to cool down
-                time.sleep(5)
-                logging.info(f"XRD experiment at 25C")
 
+                #Run the XRD scan, blocking call, run to 25C to cool down
+                self._single_scan(25)
+                
+                logging.info("XRD experiment ABORT complete")
                 return
-            
+
+            #We need to wait for the Bruker to move the Job.xml to finished, 
+            #otherwise it will just move our new file and the new job will never be executed
+            # Set the timeout in seconds
+            timeout = 3600
+            start_time = time.time()
+
+            # Wait until the timeout is reached or 'Job.xml' is no longer in the directory
+            while time.time() - start_time < timeout and 'Job.xml' in os.listdir('C:/ProgramData/Bruker AXS/LabLims/'):
+                time.sleep(0.5)
+
+            # If the timeout was reached without moving the file, throw an error
+            if 'Job.xml' in os.listdir('C:/ProgramData/Bruker AXS/LabLims/'):
+                logging.error("Timeout reached. Job.xml was not moved to finished in time.")
+                raise TimeoutError("Timeout reached while waiting for Job.xml to be moved to finished.")
+
         logging.info("XRD experiment complete")
+
+    def _single_scan(self, temp):
+        existing_file = None
+        prec = self.prec
+
+        # Define diffractometer object
+        diffrac = Diffractometer('Bruker')
+
+        # Run initial scan
+        min_angle = self.min_angle
+        max_angle = self.max_angle
+        x, y = diffrac.execute_scan(min_angle, max_angle, prec, temp, None)
+
+        # Write data
+        # Check if the Spectra directory exists, if not, create it
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+
+        spectrum_fname = f'{datetime.now().strftime("%y%m%d-%H%M%S")}_temp_{temp}.xy'
+        with open(f'{self.results_dir}/{spectrum_fname}', 'w+') as f:
+            for (xval, yval) in zip(x, y):
+                f.write('%s %s\n' % (xval, yval))
+
+        abs_saved_filepath = os.path.abspath(f'{self.results_dir}/{spectrum_fname}')
+        logging.info(f"Saved data of scan for {temp}C to {abs_saved_filepath}")
 
     def get_progress(self):
         return self.progress

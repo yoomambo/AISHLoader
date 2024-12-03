@@ -2,7 +2,6 @@ const queueList = document.getElementById('queue-list');
 const queueForm = document.getElementById('queue-form');
 const itemNameInput = document.getElementById('item-name');
 const sampleNumberInput = document.getElementById('sample-number');
-const runningItemDiv = document.getElementById('running-item');
 const startButton = document.getElementById('queue-start-button');
 
 // Array to hold the queue items
@@ -19,11 +18,11 @@ const sortable = new Sortable(queueList, {
     }
 });
 
-// setInterval(() => {
-//     $.get('/api/get_state', (data) => {
-//       console.log(data); // Handle the data received from the Flask endpoint
-//     });
-//   }, 2000);
+setInterval(() => {
+    $.get('/api/get_state', (data) => {
+      console.log(data); // Handle the data received from the Flask endpoint
+    });
+  }, 2000);
   
 
 $(document).ready(function () {
@@ -85,7 +84,7 @@ function renderQueue() {
         listItem.innerHTML = `
                 <div class="flex-grow-1">
                     <span class="item-name">${item.itemName}</span><br>
-                    <span class="item-details">Sample Number: ${item.sampleNumber} ${item.optionsText}</span>
+                    <span class="item-details">Sample Number: ${item.sampleNumber} </span>
                 </div>
             `;
 
@@ -106,30 +105,56 @@ function renderQueue() {
 function handle_button_queueAdd(event) {
     event.preventDefault();
 
-    const itemName = $.trim(itemNameInput.value);
+    // Get basic fields
+    const itemName = $.trim(itemNameInput.value);  // Assuming itemNameInput is defined elsewhere
     const sampleNumber = $('input[name="sample-number"]:checked');
-    const selectedOptions = $('input[name="options"]:checked').map(function () {
-        return this.value;
-    }).get();
 
+    // Validate itemName and sampleNumber
     if (!itemName || !sampleNumber.length) {
         alert('Please fill out all fields.');
         return;
     }
 
-    const optionsText = selectedOptions.length ? `Options: ${selectedOptions.join(', ')}` : '';
+    // Get the new fields
+    const minAngle = parseFloat($('#min-angle').val());
+    const maxAngle = parseFloat($('#max-angle').val());
+    const precision = $('#precision-select').val();
+
+    let temperatures = [];
+    if ($('#enable-temperature').is(':checked')) {
+        const minTemp = parseFloat($('#min-temperature').val());
+        const maxTemp = parseFloat($('#max-temperature').val());
+        const numScans = parseInt($('#number-of-scans').val());
+
+        // Linear interpolation of temperatures
+        const tempStep = (maxTemp - minTemp) / (numScans - 1);
+        temperatures = Array.from({ length: numScans }, (_, i) => minTemp + i * tempStep);
+    }
+
+    // Construct the new item object
     const newItem = {
         itemName: itemName,
         sampleNumber: sampleNumber.val(),
-        optionsText: optionsText
+        minAngle: minAngle,
+        maxAngle: maxAngle,
+        precision: precision,
+        temperatures: temperatures
     };
-
-    queueItems_array.push(newItem); // Add new item to the queue
+    console.log(newItem);
+    // Add new item to the queue
+    queueItems_array.push(newItem);
     renderQueue(); // Render the updated queue
 
     // Clear the input fields
     itemNameInput.value = '';
-    $('input[name="options"]:checked').prop('checked', false);
+    $('#min-angle').val(10); // Reset to default value (adjust as needed)
+    $('#max-angle').val(80); // Reset to default value (adjust as needed)
+    $('#precision-select').val('Low'); // Reset to default value
+    
+    $('#min-temperature').val(25); // Reset default temperature
+    $('#max-temperature').val(''); // Clear the max temperature
+    $('#number-of-scans').val(200); // Reset to default value
+    $('#estimated-time').hide(); // Hide estimated time
 
     // Uncheck the current sample number and check the next one
     sampleNumber.prop('checked', false);
@@ -144,7 +169,10 @@ function handle_button_queueAdd(event) {
 }
 
 
+
 function handle_button_queueStart() {
+    const runningItemDiv = document.getElementById('running-item');
+
     if (queueItems_array.length > 0) {
         const currentItem = queueItems_array.shift(); // Remove the first item from the queue
         runningItemDiv.innerHTML = `

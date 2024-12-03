@@ -157,7 +157,7 @@ class ArduinoHardware:
 
         @ErrorChecker.user_confirm_action()
         def home(self):
-            self._track_state("HOMING")
+            self._track_state("HOME")
             self._linrail_home_success = None
             self.board.send_sysex(LINRAIL_HOME, [])
 
@@ -242,7 +242,7 @@ class ArduinoHardware:
         
         @ErrorChecker.user_confirm_action()
         def close(self):
-            self._track_state("MOVE_GRAB")
+            self._track_state("MOVE_CLOSE")
             self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_CLOSE, [])
             
@@ -260,7 +260,7 @@ class ArduinoHardware:
         
         @ErrorChecker.user_confirm_action()
         def open(self):
-            self._track_state("MOVE_RELEASE")
+            self._track_state("MOVE_OPEN")
             self._gripper_move_success = None
             self.board.send_sysex(GRIPPER_OPEN, [])
             

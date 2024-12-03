@@ -151,7 +151,7 @@ class Ender3(StateTracker):
             None
         """
         logging.info("Ender3 - Initiating homing routine")
-        self._track_state("HOMING")
+        self._track_state("MOVE_HOME")
 
         # Update current_position (XYZ)
         self._update_current_position()

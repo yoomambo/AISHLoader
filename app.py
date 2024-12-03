@@ -26,8 +26,8 @@ SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
 
 # HARDWARE VARIABLES
-PORT_ENDER = '/dev/tty.usbmodem111101'
-PORT_ARDUINO = '/dev/tty.usbmodem111201'
+PORT_ENDER = '/dev/tty.usbmodem1111101'
+PORT_ARDUINO = '/dev/tty.usbmodem1111201'
 if not WEBSITE_TEST_MODE:
     try: 
         aish_loader = AISHLoader(PORT_ENDER, PORT_ARDUINO)
@@ -232,5 +232,5 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    print(f"App running at: http://127.0.0.1:5000/")
-    app.run(host='127.0.0.1', port=5000, debug=WEBSITE_TEST_MODE)
+    print(f"App running at: http://127.0.0.1:8000/")
+    app.run(host='127.0.0.1', port=8000, debug=WEBSITE_TEST_MODE)

@@ -17,17 +17,16 @@ logging.basicConfig(
 
 experiment_thread = ThreadPoolExecutor(max_workers=1)
 
-exp = AISHExperiment('test', 0, 180, 0.01, [300, 400, 500, 600])
+exp = AISHExperiment('test2', 40, 44, 'Low', [30])
 
 def run_exp():
-    exp.test_run_sequence()
+    exp.run_sequence()
 
-experiment_thread.submit(run_exp)
+future = experiment_thread.submit(run_exp)
 
-for i in range(30):
-    logging.info(f"{i} : {exp.get_progress()}")
-    time.sleep(1)
+# Block the main thread until the task is finished
+future.result()  # This will block until run_exp() finishes
 
-    if i == 7:
-        logging.info("Abort command sent")
-        exp.abort()
+# Once the thread is done, exit the program or perform any final actions
+logging.info("Experiment is complete. Exiting program.")
+experiment_thread.shutdown() 
