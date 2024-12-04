@@ -1,6 +1,20 @@
 console.log("UTILS LOADED");
 
-function calculateProcedureTime() {
+function calculateProcedureTime(minTemp, maxTemp, minAngle, maxAngle, precision, numScans) {
+    const XRD_SCAN_TIME = 2; // Base time for each XRD scan in minutes
+    const RAMP_RATE = 60;    // Ramp rate is 60°C/min
+
+    const rampTime = (maxTemp - minTemp) / RAMP_RATE;
+    const precisionFactor = (precision == "High") ? 1.5 : 1;
+    const scanRange = maxAngle - minAngle;
+    const scanTime = XRD_SCAN_TIME * (scanRange / 100) * precisionFactor;
+    const totalScanTime = scanTime * numScans;
+    const totalTime = totalScanTime + rampTime;
+
+    return { totalTime, scanTime, totalScanTime, rampTime };
+}
+
+function displayProcedureTime() {
     const XRD_SCAN_TIME = 2; // Base time for each XRD scan in minutes
     const RAMP_RATE = 60;    // Ramp rate is 60°C/min
 
@@ -12,19 +26,7 @@ function calculateProcedureTime() {
     const precision = $('#precision-select').val();  // Low or High precision
 
     if (!isNaN(minTemp) && !isNaN(maxTemp) && !isNaN(numScans) && !isNaN(minAngle) && !isNaN(maxAngle)) {
-        // Calculate the ramp time for temperature change
-        const rampTime = (maxTemp - minTemp) / RAMP_RATE;
-
-        // Calculate the XRD scan time contribution based on precision
-        const precisionFactor = (precision === "High") ? 1.5 : 1; // High precision takes 1.5x longer
-        const scanRange = maxAngle - minAngle;  // The 2θ range
-        const scanTime = XRD_SCAN_TIME * (scanRange / 100) * precisionFactor;  // Adjust scan time based on 2θ range and precision
-
-        // Total scan time = (scan time per scan * number of scans)
-        const totalScanTime = scanTime * numScans;
-
-        // Total procedure time = scan time + ramp time
-        const totalTime = totalScanTime + rampTime;
+        const { totalTime, scanTime, totalScanTime, rampTime } = calculateProcedureTime(minTemp, maxTemp, minAngle, maxAngle, precision, numScans);
 
         // Breakdown of contributions
         const scanBreakdown = `${scanTime.toFixed(2)} min/scan * ${numScans} scans = ${totalScanTime.toFixed(2)} min`;
@@ -38,7 +40,7 @@ function calculateProcedureTime() {
         $('#ramp-breakdown').text(rampBreakdown);
 
         // Show the breakdown section
-        $('#time-breakdown').show();
+        $('#time-breakdown').show(); // Hide estimated time
     } else {
         $('#estimated-time').text('');
         $('#time-breakdown').hide();

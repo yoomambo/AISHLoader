@@ -11,6 +11,7 @@ logging.basicConfig(
     datefmt='%y-%m-%d %H:%M:%S'
 )
 
+#TODO: Add self homing intermittently to ensure that the system is in a known state
 
 class AISHLoader(StateTracker):
     

@@ -1,4 +1,7 @@
+// Linear rail takes 25000 to go up, use 25100 to ensure spring loading
+
 #include <Boards.h>
+// Using Frimata 2.5.9 (BXL 241203)
 #include <Firmata.h>
 #include <FirmataConstants.h>
 #include <FirmataDefines.h>
@@ -21,6 +24,7 @@ Servo gripperServo;  // create Servo object to control a servo
 // Define the number of steps per revolution for motor
 #define RAIL_STEPS_PER_REV 400
 #define RAIL_PULSEWIDTH 300  // Controls the speed, longer = slower
+#define RAIL_TRAVELREVS 63
 int RAIL_stepCount = -1;     // Tracks the current number of steps of the stepper motor rail.  75*400 = 30 000, which is storable in signed int
 
 void setup() {
@@ -59,14 +63,14 @@ void sysexCallback(byte command, byte argc, byte* argv) {
     //LINEAR RAIL CALLBACKS
     case 0x20:  //Linear rail go up
       {
-        rotateMotor(10 * RAIL_STEPS_PER_REV);
+        rotateMotor(RAIL_TRAVELREVS * RAIL_STEPS_PER_REV);
         byte data = 0xFF;
         Firmata.sendSysex(command, 1, &data);  //Send a 0xFF byte to indicate it is finished and successful
         break;
       }
     case 0x21:  //Linear rail go down
       {
-        rotateMotor(-10 * RAIL_STEPS_PER_REV);
+        rotateMotor(-RAIL_TRAVELREVS * RAIL_STEPS_PER_REV);
         byte data = 0xFF;
         Firmata.sendSysex(command, 1, &data);  //Send a 0xFF byte to indicate it is finished and successful
         break;
@@ -80,7 +84,7 @@ void sysexCallback(byte command, byte argc, byte* argv) {
         data[1] = RAIL_stepCount & 0xFF;
 
         // Send the data as a Sysex message
-        Firmata.sendSysex(command, 2, data);  // 0x71 is an example command ID
+        Firmata.sendSysex(command, 2, data);  
         break;
       }
     case 0x23:  //Home the rail

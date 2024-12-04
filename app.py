@@ -50,16 +50,24 @@ def get_state():
     '''
     state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
              'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
+    
+    print(state)
     return jsonify(state)
 
 # Endpoints to eject/load sample buffer 
 @app.route('/api/loading_sample_buffer', methods=['POST'])
 def loading_sample_buffer():
-    aish_loader.eject_sample_buffer(True)
+    logging.info("Loading sample buffer")
+    if not WEBSITE_TEST_MODE:
+        aish_loader.eject_sample_buffer(True)
+    return jsonify({"success": True})
 
 @app.route('/api/done_loading_sample_buffer', methods=['POST'])
 def done_loading_sample_buffer():
-    aish_loader.eject_sample_buffer(False)
+    logging.info("Done loading sample buffer")
+    if not WEBSITE_TEST_MODE:
+        aish_loader.eject_sample_buffer(False)
+    return jsonify({"success": True})
 
 
 @app.route('/api/command', methods=['POST'])
@@ -73,18 +81,20 @@ def command():
     sample_num = request.json['sample_num']
     xrd_params = request.json['xrd_params']
 
-    # Create a new XRD experiment, and loading routine
-    aish_experiment = AISHExperiment(xrd_params)
-    def run_xrd(sample_num, xrd_params):
-        aish_loader.load_sample(sample_num)
-        aish_experiment.run_sequence(xrd_params)
-        aish_loader.unload_sample()
+    logging.info(f"Received command to run XRD on sample \n\t{sample_num} \n\t{xrd_params}")
 
-        #Reset the experiment
-        aish_experiment = None
+    # # Create a new XRD experiment, and loading routine
+    # aish_experiment = AISHExperiment(xrd_params)
+    # def run_xrd(sample_num, xrd_params):
+    #     aish_loader.load_sample(sample_num)
+    #     aish_experiment.run_sequence(xrd_params)
+    #     aish_loader.unload_sample()
 
-    # Submit the full routine to the executor
-    experiment_thread.submit(run_xrd, sample_num, xrd_params)
+    #     #Reset the experiment
+    #     aish_experiment = None
+
+    # # Submit the full routine to the executor
+    # experiment_thread.submit(run_xrd, sample_num, xrd_params)
 
     return jsonify({"success": True})
 
