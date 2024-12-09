@@ -18,8 +18,6 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-Connecting Serial
-The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
 
 # Control Interface Guide
 `pass`
@@ -42,8 +40,13 @@ A `STEPPERONLINE Stepper Motor Driver` controller was used to control the linear
 
 Errors
 ===
-#### Ender3 positions are ~0.5x 
+### Ender3 positions are ~0.5x 
 When the Ender3 is not connected properly, the unit scale gets changed.  This usually results in the Ender moving about 1/2 the distance that is inputted.  To fix, restart the system, unplug the serial connection to the Ender, and power cycle the Ender.  Make sure to wait for the Ender to start up and be ready, then plug in the serial connection and try the connection.
+
+### Connecting Serial
+
+The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
+
 
 Notes
 ===
