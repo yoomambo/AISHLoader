@@ -25,7 +25,6 @@ const sortable = new Sortable(queueList, {
 
 setInterval(() => {
     
-
     // Get the system state from the Flask endpoint
     let systemState = [];
     $.ajax({
@@ -37,13 +36,7 @@ setInterval(() => {
         }
     });
     console.log(systemState);
-    console.log(systemState.aish_experiment == null);
-    console.log(queue_paused);
-
-
-    // Update the system state on the page
-    renderQueue();
-    renderCurrentlyRunning(systemState);
+    console.log(`SysState Null: ${systemState.aish_experiment == null}, Queue Paused: ${queue_paused}`);
 
     // Check if the queue is paused, and if the system is ready to run the next item
     // If the queue is not paused and the system is ready, send the next item in the queue
@@ -51,6 +44,10 @@ setInterval(() => {
         console.log('Sending next item in queue.');
         sendNextQueueItem();
     }
+
+    // Update the system state on the page
+    renderQueue();
+    renderCurrentlyRunning(systemState);
 
   }, 2000);
   
@@ -63,6 +60,8 @@ $(document).ready(function () {
     // Queue
     $('#queue-form').on('submit', handle_button_queueAdd);
     $('#queue-start-button').on('click', handle_button_queueStart);
+    $('#queue-pause-button').on('click', handle_button_queuePause);
+    $('#queue-abort-button').on('click', handle_button_queueAbort);
 
     // Manual Control (AISH Sample Loader)
     $('#manualControl-loadButton').on('click', handle_button_manualLoading);
@@ -153,8 +152,8 @@ function renderQueue() {
 function renderCurrentlyRunning(systemStateData) {
     const runningItemDiv = document.getElementById('running-item');
 
-    if (queueRunningItem == null) {
-        runningItemDiv.innerHTML = '';
+    if (queue_paused && systemStateData.aish_experiment == null) {
+        runningItemDiv.innerHTML = ''; // Clear the currently running box
         return;
     }
 
@@ -263,6 +262,7 @@ function sendNextQueueItem() {
 
     queueRunningItem = queueItems_array.shift(); // Remove the first item from the queue
     renderQueue(); // Re-render the queue to reflect changes
+    renderCurrentlyRunning(); // Render the currently running item
 
     const command_package = {
         sample_name: queueRunningItem.itemName,
@@ -298,6 +298,7 @@ function handle_button_queueStart() {
 }
 
 function handle_button_queuePause() {
+    console.log('Queue Paused');
     queue_paused = true;    // Set the queue to paused, so it doesn't send the next item
 }
 

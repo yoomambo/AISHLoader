@@ -14,9 +14,10 @@ logging.basicConfig(
     datefmt='%y-%m-%d %H:%M:%S'
 )
 
-STAGE_POSITION = (200, 0, 30)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
+STAGE_POSITION = (231, 0, 141)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
+STAGE_Z_OFFSET_POS = 149              #Offset to avoid collision with the stage
 # List of sample positions (x,y,z) in Ender3 coordinates
-pos_0 = np.array([39.1, 176.7, 3]) # Row 1, these are found center positions (have +/-0.3mm tolerance)
+pos_0 = np.array([39.1, 176, 3]) # Row 1, these are found center positions (have +/-0.3mm tolerance)
 pos_4 = np.array([40.1, 17.4, 3])
 pos_5 = np.array([79.65, 177.0, 12.0]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
 pos_9 = np.array([0,0,0])
@@ -25,7 +26,7 @@ print(SAMPLE_POSITIONS)
 
 SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples
 
-ENDER_LIMITS = [(0, 220), (0, 220), (0, 250)]
+ENDER_LIMITS = [(0, 230), (0, 220), (0, 143)]
 ENDER_MAX_SPEED = np.array([1000, 1000, 300])
 
 class Ender3(StateTracker):
@@ -81,13 +82,12 @@ class Ender3(StateTracker):
             Any exceptions raised by the _move_to or _track_state methods.
         """
         self._track_state("MOVE_STAGE")
-        stage_z_offset = 20
 
         #First move Z to avoid collision with stage, also enables pickup
-        self._move_to(self.current_position[0], self.current_position[1], STAGE_POSITION[2]+stage_z_offset, 6000)
+        self._move_to(self.current_position[0], self.current_position[1], STAGE_Z_OFFSET_POS, 3000)
 
         #Then move X to stage position
-        self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_POSITION[2]+stage_z_offset, 4000)
+        self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_Z_OFFSET_POS, 3000)
 
         #Then move Z to stage position to place down the sample
         self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_POSITION[2], 1000)
@@ -108,10 +108,9 @@ class Ender3(StateTracker):
             Any exceptions raised by the _move_to method.
         """
         self._track_state("MOVE_REST")
-        stage_z_offset = 20
 
         # Move Z back up to avoid collision with the stage
-        self._move_to(self.current_position[0], self.current_position[1], self.current_position[2]+stage_z_offset, 1000)
+        self._move_to(self.current_position[0], self.current_position[1], STAGE_Z_OFFSET_POS, 1000)
 
         # Move X backwards, gripper out of the way of everything
         self._move_to(0, self.current_position[1], self.current_position[2], 4000)

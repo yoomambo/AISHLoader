@@ -4,12 +4,13 @@ from AISHLoader import AISHLoader
 from AISHExperiment import AISHExperiment
 import logging
 import os
+import time
 
 print('\n\n\n')
 
 #Set up logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",
     datefmt='%y-%m-%d %H:%M:%S'
 )
@@ -18,6 +19,7 @@ logging.basicConfig(
 # Flask application
 app = Flask(__name__, static_url_path='/static')
 WEBSITE_TEST_MODE = True
+tempvar = 0
 
 # STATE VARIABLES
 IS_SAMPLE_LOADED = False
@@ -26,8 +28,8 @@ SAMPLE_POS = None       #Saves the sample position of the loaded sample, None if
 SAMPLE_POS_LIST = ()    #Tuple of positions that have been loaded into the buffer
 
 # HARDWARE VARIABLES
-PORT_ENDER = '/dev/tty.usbmodem1111101'
-PORT_ARDUINO = '/dev/tty.usbmodem1111201'
+PORT_ENDER = '/dev/tty.usbmodem141101'
+PORT_ARDUINO = '/dev/tty.usbmodem141201'
 if not WEBSITE_TEST_MODE:
     try: 
         aish_loader = AISHLoader(PORT_ENDER, PORT_ARDUINO)
@@ -48,10 +50,13 @@ def get_state():
     '''
     Returns the state of the automated In-situ heating XRD loader
     '''
+    # state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
+            #  'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
     state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
-             'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
-    
-    print(state)
+             'aish_experiment': aish_experiment if aish_experiment is not None else None}
+
+    print("AISH EXPERIMENT", aish_experiment)
+
     return jsonify(state)
 
 # Endpoints to eject/load sample buffer 
@@ -78,14 +83,35 @@ def command():
     Frontend pushes the latest item in its queue to this endpoint, also is endpoint
     intended for ALabOS to use.
     '''
+    global aish_experiment  #Ensure we are using the global variable to store the experiment
     sample_num = request.json['sample_num']
     xrd_params = request.json['xrd_params']
 
     logging.info(f"Received command to run XRD on sample \n\t{sample_num} \n\t{xrd_params}")
 
-    # # Create a new XRD experiment, and loading routine
-    # aish_experiment = AISHExperiment(xrd_params)
+    
+    aish_experiment = {'sample_num': sample_num, 'xrd_params': xrd_params}
+    print("OUT OF TEST", aish_experiment)
+    def run_test():
+        global aish_experiment  #Ensure we are using the global aish_experiment
+        print(f"IN TEST {aish_experiment}\n\n")
+        logging.info("Starting experiment")
+        time.sleep(5)
+        
+        aish_experiment = "WORLD"
+        print(f"IN TEST2 {aish_experiment}\n\n")
+        time.sleep(5)
+
+        print(f"IN TEST3 {aish_experiment}\n\n")
+        aish_experiment = None
+    experiment_thread.submit(run_test)
+
+    # # # Create a new XRD experiment, and loading routine
+    # # aish_experiment = AISHExperiment(xrd_params)
     # def run_xrd(sample_num, xrd_params):
+    #     global aish_experiment
+    #     global aish_loader
+    #     # Load the sample
     #     aish_loader.load_sample(sample_num)
     #     aish_experiment.run_sequence(xrd_params)
     #     aish_loader.unload_sample()
