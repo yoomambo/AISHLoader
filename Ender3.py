@@ -14,22 +14,21 @@ logging.basicConfig(
     datefmt='%y-%m-%d %H:%M:%S'
 )
 
-STAGE_POSITION = (231, 0, 141)  #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
-STAGE_Z_OFFSET_POS = 149              #Offset to avoid collision with the stage
 # List of sample positions (x,y,z) in Ender3 coordinates
-pos_0 = np.array([39.1, 176, 3]) # Row 1, these are found center positions (have +/-0.3mm tolerance)
-pos_4 = np.array([40.1, 17.4, 3])
-pos_5 = np.array([79.65, 177.0, 12.0]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
-pos_9 = np.array([0,0,0])
-SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0)
-print(SAMPLE_POSITIONS)
-
-SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples
-
-ENDER_LIMITS = [(0, 230), (0, 220), (0, 143)]
-ENDER_MAX_SPEED = np.array([1000, 1000, 300])
+pos_0 = np.array([39.8, 176.25, 5]) # Row 1, these are found center positions (have +/-0.3mm tolerance)
+pos_4 = np.array([40.6, 17.4, 5])
+pos_5 = np.array([79.75, 177.0, 15.5]) # Row 2, these are found center positions (have +/-0.3mm tolerance)
+pos_9 = np.array([80.7,17.45,16.5])
 
 class Ender3(StateTracker):
+    SAMPLE_MIN_Z = 30       #Minimum Z position to avoid collision with the samples
+    SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0)
+
+    STAGE_POSITION = (230.5, 0, 141)        #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
+    STAGE_Z_OFFSET_POS = 149              #Offset z-value position to avoid collision with the stage
+
+    ENDER_LIMITS = [(0, 230), (0, 220), (0, 143)]
+    ENDER_MAX_SPEED = np.array([1000, 1000, 300])
 
     def __init__(self, PORT = '/dev/tty.usbmodem1401'):
         super().__init__()      # Initialize the StateTracker class
@@ -62,11 +61,11 @@ class Ender3(StateTracker):
         sample_num (int): The index of the sample position to move to.
         """
         self._track_state(f"MOVE_SAMPLE_{sample_num}")
-        sample_pos = SAMPLE_POSITIONS[sample_num]
+        sample_pos = self.SAMPLE_POSITIONS[sample_num]
 
         #Move to above the sample position first
-        self._move_to(self.current_position[0]  , self.current_position[1]  , SAMPLE_MIN_Z, 1200) #Move only Z first
-        self._move_to(sample_pos[0]             , sample_pos[1]             , SAMPLE_MIN_Z, 4000) #Move above the sample position
+        self._move_to(self.current_position[0]  , self.current_position[1]  , self.SAMPLE_MIN_Z, 1200) #Move only Z first
+        self._move_to(sample_pos[0]             , sample_pos[1]             , self.SAMPLE_MIN_Z, 4000) #Move above the sample position
 
         #Now we can move down to the sample position and grab the sample
         self._move_to(*sample_pos, 1000)
@@ -84,13 +83,13 @@ class Ender3(StateTracker):
         self._track_state("MOVE_STAGE")
 
         #First move Z to avoid collision with stage, also enables pickup
-        self._move_to(self.current_position[0], self.current_position[1], STAGE_Z_OFFSET_POS, 3000)
+        self._move_to(self.current_position[0], self.current_position[1], self.STAGE_Z_OFFSET_POS, 3000)
 
         #Then move X to stage position
-        self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_Z_OFFSET_POS, 3000)
+        self._move_to(self.STAGE_POSITION[0], self.current_position[1], self.STAGE_Z_OFFSET_POS, 3000)
 
         #Then move Z to stage position to place down the sample
-        self._move_to(STAGE_POSITION[0], self.current_position[1], STAGE_POSITION[2], 1000)
+        self._move_to(self.STAGE_POSITION[0], self.current_position[1], self.STAGE_POSITION[2], 1000)
 
     def move_to_rest(self):
         """
@@ -110,7 +109,7 @@ class Ender3(StateTracker):
         self._track_state("MOVE_REST")
 
         # Move Z back up to avoid collision with the stage
-        self._move_to(self.current_position[0], self.current_position[1], STAGE_Z_OFFSET_POS, 1000)
+        self._move_to(self.current_position[0], self.current_position[1], self.STAGE_Z_OFFSET_POS, 1000)
 
         # Move X backwards, gripper out of the way of everything
         self._move_to(0, self.current_position[1], self.current_position[2], 4000)
@@ -124,9 +123,9 @@ class Ender3(StateTracker):
         maximum Y position while keeping the current X and Z positions unchanged.
         """
         self._track_state("MOVE_EJECT")
-        self._move_to(self.current_position[0]  , self.current_position[1]  , SAMPLE_MIN_Z)     #First move Z up to avoid collision with the bed
-        self._move_to(0                         , self.current_position[1]  , SAMPLE_MIN_Z)     #Move bed to the eject position
-        self._move_to(0                         , ENDER_LIMITS[1][1]         , SAMPLE_MIN_Z, 4000)     #Move bed to the eject position
+        self._move_to(self.current_position[0]  , self.current_position[1]  , self.SAMPLE_MIN_Z)     #First move Z up to avoid collision with the bed
+        self._move_to(0                         , self.current_position[1]  , self.SAMPLE_MIN_Z)     #Move bed to the eject position
+        self._move_to(0                         , self.ENDER_LIMITS[1][1]         , self.SAMPLE_MIN_Z, 4000)     #Move bed to the eject position
 
     def move_to_home(self):
         """
@@ -135,7 +134,7 @@ class Ender3(StateTracker):
         self._track_state("MOVE_HOME")
 
         #Move Z up to avoid collision with the bed
-        self._move_to(self.current_position[0], self.current_position[1], SAMPLE_MIN_Z)
+        self._move_to(self.current_position[0], self.current_position[1], self.SAMPLE_MIN_Z)
 
         #Now move bed out of the way
         self._move_to(0, self.current_position[1], self.current_position[2])
@@ -155,7 +154,7 @@ class Ender3(StateTracker):
         # Update current_position (XYZ)
         self._update_current_position()
         #Move Z up to avoid collision with the bed
-        self._move_to(self.current_position[0], self.current_position[1], self.current_position[2]+SAMPLE_MIN_Z)
+        self._move_to(self.current_position[0], self.current_position[1], self.current_position[2]+self.SAMPLE_MIN_Z)
         
         # (1) Gcode to move to HOME, do homing routine
         self.serial.write(str.encode("G28\r\n"))
@@ -170,10 +169,10 @@ class Ender3(StateTracker):
     def _move_to(self, x, y, z, speed=2000):
         #Calculate the distance to move, time to set the timeout
         distances = np.array( [(x - self.current_position[0]), (y - self.current_position[1]), (z - self.current_position[2])] )
-        MAX_TIMEOUT = max( np.abs(distances)/ENDER_MAX_SPEED *60 ) + 10
+        MAX_TIMEOUT = max( np.abs(distances)/self.ENDER_MAX_SPEED *60 ) + 10
         # print(f"Distance: {distances}, Time: {MAX_TIMEOUT}")
 
-        logging.debug(f"Ender3 - Starting move from {self.current_position} to {float(x), float(y), float(z)}")
+        logging.debug(f"Ender3 - Starting move from {self.current_position} to ({x:.3f}, {y:.3f}, {z:.3f})")
         self.serial.write(str.encode(f"G01 X{x} Y{y} Z{z} F{speed}\r\n"))   # Gcode to move to XYZ
         #Wait for the move to complete
         self._wait_for_response(MAX_TIMEOUT)
@@ -182,7 +181,7 @@ class Ender3(StateTracker):
         self.current_position = np.array([x, y, z], dtype=float)
         self._update_current_position()
 
-        logging.debug(f"Ender3 - Moved to:  {float(x), float(y), float(z)}")
+        logging.debug(f"Ender3 - Moved to: ({x:.3f}, {y:.3f}, {z:.3f})")
 
     @ErrorChecker.user_confirm_action()
     def _update_current_position(self):
