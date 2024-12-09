@@ -40,11 +40,13 @@ A `STEPPERONLINE Stepper Motor Driver` controller was used to control the linear
 
 Errors
 ===
-### Ender3 positions are ~0.5x 
+### Manual adjustment of Ender3
+Sometimes, manual adjustment of the Ender3 needs to be done to put it in a position that is good for testing.  The gantry cannot be manipulated when the Ender is powered, so it must be de-powered.  Remember to unplug the Serial connection, then power down the Ender.  Follow the procedure in [Ender3 Connection](#Ender3-Connection).
+
+### Ender3 Connection
 When the Ender3 is not connected properly, the unit scale gets changed.  This usually results in the Ender moving about 1/2 the distance that is inputted.  To fix, restart the system, unplug the serial connection to the Ender, and power cycle the Ender.  Make sure to wait for the Ender to start up and be ready, then plug in the serial connection and try the connection.
 
 ### Connecting Serial
-
 The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
 
 
