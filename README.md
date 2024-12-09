@@ -40,6 +40,10 @@ A `STEPPERONLINE Stepper Motor Driver` controller was used to control the linear
 
 ![image](https://github.com/user-attachments/assets/d1e697b1-f1c8-4efd-ad24-dfa8ad17662b)
 
+Errors
+===
+#### Ender3 positions are ~0.5x 
+When the Ender3 is not connected properly, the unit scale gets changed.  This usually results in the Ender moving about 1/2 the distance that is inputted.  To fix, restart the system, unplug the serial connection to the Ender, and power cycle the Ender.  Make sure to wait for the Ender to start up and be ready, then plug in the serial connection and try the connection.
 
 Notes
 ===
