@@ -90,37 +90,46 @@ def command():
     logging.info(f"Received command to run XRD on sample \n\t{sample_num} \n\t{xrd_params}")
 
     
-    aish_experiment = {'sample_num': sample_num, 'xrd_params': xrd_params}
-    print("OUT OF TEST", aish_experiment)
-    def run_test():
-        global aish_experiment  #Ensure we are using the global aish_experiment
-        print(f"IN TEST {aish_experiment}\n\n")
-        logging.info("Starting experiment")
-        time.sleep(5)
+    # aish_experiment = {'sample_num': sample_num, 'xrd_params': xrd_params}
+    # print("OUT OF TEST", aish_experiment)
+    # def run_test():
+    #     global aish_experiment  #Ensure we are using the global aish_experiment
+    #     print(f"IN TEST {aish_experiment}\n\n")
+    #     logging.info("Starting experiment")
+    #     time.sleep(5)
         
-        aish_experiment = "WORLD"
-        print(f"IN TEST2 {aish_experiment}\n\n")
-        time.sleep(5)
+    #     aish_experiment = "WORLD"
+    #     print(f"IN TEST2 {aish_experiment}\n\n")
+    #     time.sleep(5)
 
-        print(f"IN TEST3 {aish_experiment}\n\n")
-        aish_experiment = None
-    experiment_thread.submit(run_test)
-
-    # # # Create a new XRD experiment, and loading routine
-    # # aish_experiment = AISHExperiment(xrd_params)
-    # def run_xrd(sample_num, xrd_params):
-    #     global aish_experiment
-    #     global aish_loader
-    #     # Load the sample
-    #     aish_loader.load_sample(sample_num)
-    #     aish_experiment.run_sequence(xrd_params)
-    #     aish_loader.unload_sample()
-
-    #     #Reset the experiment
+    #     print(f"IN TEST3 {aish_experiment}\n\n")
     #     aish_experiment = None
+    # experiment_thread.submit(run_test)
 
-    # # Submit the full routine to the executor
-    # experiment_thread.submit(run_xrd, sample_num, xrd_params)
+    # # Create a new XRD experiment, and loading routine
+    sample_name = xrd_params['sample_name']
+    min_angle = xrd_params['min_angle']
+    max_angle = xrd_params['max_angle']
+    prec = xrd_params['prec']
+    temperatures = xrd_params['temperatures']
+    aish_experiment = AISHExperiment(sample_name, min_angle, max_angle, prec, temperatures)
+    def run_xrd(sample_num, xrd_params):
+        global aish_experiment
+        global aish_loader
+
+        # Load the sample and run
+        aish_loader.load_sample(sample_num)
+        aish_experiment.run_sequence(xrd_params)
+        aish_loader.unload_sample()
+
+        # Home all the hardware
+        aish_loader.home_all()
+
+        #Reset the experiment
+        aish_experiment = None
+
+    # Submit the full routine to the executor
+    experiment_thread.submit(run_xrd, sample_num, xrd_params)
 
     return jsonify({"success": True})
 
