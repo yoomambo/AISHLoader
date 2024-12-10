@@ -49,6 +49,10 @@ setInterval(() => {
     renderQueue();
     renderCurrentlyRunning(systemState);
 
+
+    renderCurrentSystemState(systemState);
+
+
   }, 2000);
   
 
@@ -103,6 +107,33 @@ $(document).ready(function () {
     $('#min-angle, #max-angle, #precision-select, #min-temperature, #max-temperature, #number-of-scans').on('input', displayProcedureTime);
 
 });
+
+function renderCurrentSystemState(data) {
+    if (data.aish_loader == null) {
+        // Change the badge status to indicate the system is not connected
+        document.getElementById('aish-loader-status').innerHTML = 'Disconnected';
+        document.getElementById('aish-loader-status').classList.remove('bg-success');
+        document.getElementById('aish-loader-status').classList.add('bg-danger');
+        return;
+    }
+    // Reset the badge status to indicate system is operational
+    document.getElementById('aish-loader-status').innerHTML = 'Operational';
+    document.getElementById('aish-loader-status').classList.remove('bg-danger');
+    document.getElementById('aish-loader-status').classList.add('bg-success');
+    
+    // AISH Loader section
+    document.getElementById('allow-movement').textContent = data.aish_loader.allow_movement ? 'Yes' : 'No';
+    document.getElementById('error-halt').textContent = data.aish_loader.error_halt ? 'Yes' : 'No';
+    document.getElementById('sample-loaded').textContent = data.aish_loader.sample_loaded;
+
+    // Sample Loader section
+    document.getElementById('ender3-state').textContent = data.aish_loader.ender3;
+    document.getElementById('gripper-state').textContent = data.aish_loader.arduino.gripper;
+
+    // Stage Loader section
+    document.getElementById('linear-rail-state').textContent = data.aish_loader.arduino.linear_rail;
+}
+
 
 //////////////////////////////////////////////
 // Queue Management

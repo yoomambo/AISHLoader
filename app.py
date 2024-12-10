@@ -18,7 +18,7 @@ logging.basicConfig(
 
 # Flask application
 app = Flask(__name__, static_url_path='/static')
-WEBSITE_TEST_MODE = False
+WEBSITE_TEST_MODE = True
 tempvar = 0
 
 # STATE VARIABLES

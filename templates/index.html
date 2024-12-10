@@ -62,7 +62,6 @@
     <!-- Main Content -->
     <div class="container mt-5">
         <div class="row">
-
             <!-- Left: Queue Display -->
             <div class="col-md-6">
                 <div class="card h-100">
@@ -227,6 +226,57 @@
                     <button class="btn btn-primary">Add to Queue</button>
                 </form>
             </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-12 mt-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title">
+                            System Status 
+                            <span id="aish-loader-status" class="badge bg-danger fs-6 align-middle">Disconnected</span>
+                        </h2>
+                
+                        <div class="row d-flex align-items-stretch">
+                            <!-- AISH Loader Section -->
+                            <div class="col-md-3 d-flex">
+                                <div class="border p-2 flex-fill">
+                                    <h4>AISH Loader</h4>
+                                    <p>Allow Movement: <span id="allow-movement"></span></p>
+                                    <p>Error Halt: <span id="error-halt"></span></p>
+                                    <p>Sample Loaded: <span id="sample-loaded"></span></p>
+                                </div>
+                            </div>
+                
+                            <!-- Experiment Section -->
+                            <div class="col-md-3 d-flex">
+                                <div class="border p-2 flex-fill">
+                                    <h4>Experiment</h4>
+                                    <p>(To be populated)</p>
+                                </div>
+                            </div>
+                
+                            <!-- Sample Loader Section -->
+                            <div class="col-md-3 d-flex">
+                                <div class="border p-2 flex-fill">
+                                    <h4>Sample Loader</h4>
+                                    <p>Ender3 State: <span id="ender3-state"></span></p>
+                                    <p>Gripper State: <span id="gripper-state"></span></p>
+                                </div>
+                            </div>
+                
+                            <!-- Stage Loader Section -->
+                            <div class="col-md-3 d-flex">
+                                <div class="border p-2 flex-fill">
+                                    <h4>Stage Loader</h4>
+                                    <p>Linear Rail State: <span id="linear-rail-state"></span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+            </div>
+            
         </div>
     </div>
 
