@@ -25,7 +25,7 @@ class Ender3(StateTracker):
     SAMPLE_POSITIONS = np.append(np.linspace(pos_0, pos_4, num=5), np.linspace(pos_5, pos_9, num=5), axis=0)
 
     STAGE_POSITION = (230.5, 0, 141)        #Position of the stage in Ender3 coordinates (only XZ matters, but insert Y=0)
-    STAGE_Z_OFFSET_POS = 149              #Offset z-value position to avoid collision with the stage
+    STAGE_Z_OFFSET_POS = 151              #Offset z-value position to avoid collision with the stage
 
     ENDER_LIMITS = [(0, 230), (0, 220), (0, 143)]
     ENDER_MAX_SPEED = np.array([1000, 1000, 300])
@@ -112,7 +112,10 @@ class Ender3(StateTracker):
         self._move_to(self.current_position[0], self.current_position[1], self.STAGE_Z_OFFSET_POS, 1000)
 
         # Move X backwards, gripper out of the way of everything
-        self._move_to(0, self.current_position[1], self.current_position[2], 4000)
+        self._move_to(0, self.current_position[1], self.STAGE_Z_OFFSET_POS, 4000)
+        
+        #Move down to avoid collision with the furnace if we home the Ender3 next
+        self._move_to(0, self.current_position[1], self.STAGE_Z_OFFSET_POS-30, 4000)    
 
     # Moves the bed to the eject position, for loading/unloading the samples
     def move_eject_bed(self):

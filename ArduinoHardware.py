@@ -80,7 +80,7 @@ class ArduinoHardware:
 
     class LinearRail(StateTracker):
 
-        MOVE_TIMEOUT = 5
+        MOVE_TIMEOUT = 30
         HOME_TIMEOUT = 10
         CHECK_TIMEOUT = 1
         RAIL_STEPS_PER_REV = 400
