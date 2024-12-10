@@ -203,8 +203,7 @@ class AISHLoader(StateTracker):
         #(5) Release sample with Gripper
         self.arduino.gripper.open()
 
-        #(6) Return 3D printer to rest position
-        self.ender3.move_to_rest()
+        # We can leave the gripper open at the sample position
         self.SAMPLE_LOADED = None
 
     @ErrorChecker.user_confirm_action()
