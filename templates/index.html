@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <title>
-        AISH XRD
+        AISH XRD Control
     </title>
 
     <style>
@@ -55,24 +55,27 @@
     <!-- Title bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand">AISH Loader Control</a>
+            <a class="navbar-brand" style="font-size: 1.5rem;">AISH Loader Control</a>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-5">
+    <div class="container mt-3">
         <div class="row">
             <!-- Left: Queue Display -->
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-5">
-                                <h3 class="card-title">Queue</h3>
+                            <div class="col-md-8">
+                                <h3 class="card-title">
+                                    Queue
+                                    <span id="queue-status" class="badge bg-warning fs-6 align-middle">Paused</span>
+                                </h3>
                             </div>
 
                             <!-- Queue control buttons (start, pause, abort) -->
-                            <div class="col-md-7 text-end">
+                            <div class="col-md-4 text-end">
                                 <button id="queue-start-button" class="btn btn-success mb-3" data-bs-toggle="tooltip"
                                     data-bs-placement="bottom" title="Start running the queue">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -91,7 +94,7 @@
                                     </svg>
                                 </button>
 
-                                <button id="queue-stop-button" class="btn btn-danger mb-3" data-bs-toggle="tooltip"
+                                <button id="queue-abort-button" class="btn btn-danger mb-3" data-bs-toggle="tooltip"
                                     data-bs-placement="bottom" title="Abort current and pause (MUST MANUALLY UNLOAD)">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                         class="bi bi-stop-fill" viewBox="0 0 16 16">
@@ -227,7 +230,8 @@
                 </form>
             </div>
         </div>
-
+        
+        <!-- System Status Section -->
         <div class="row">
             <div class="col-md-12 mt-4">
                 <div class="card">
@@ -238,46 +242,127 @@
                         </h2>
                 
                         <div class="row d-flex align-items-stretch">
-                            <!-- AISH Loader Section -->
-                            <div class="col-md-3 d-flex">
-                                <div class="border p-2 flex-fill">
-                                    <h4>AISH Loader</h4>
-                                    <p>Allow Movement: <span id="allow-movement"></span></p>
-                                    <p>Error Halt: <span id="error-halt"></span></p>
-                                    <p>Sample Loaded: <span id="sample-loaded"></span></p>
-                                </div>
-                            </div>
-                
                             <!-- Experiment Section -->
-                            <div class="col-md-3 d-flex">
+                            <div class="col-md-5 d-flex">
                                 <div class="border p-2 flex-fill">
                                     <h4>Experiment</h4>
-                                    <p>(To be populated)</p>
+                                    <div class="row">
+                                        <div class="col-md-4 text-end">
+                                            Sample Number:
+                                        </div>
+                                        <div class="col-md-8">
+                                            <span id="experiment-sample-num"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4 text-end">
+                                            XRD Min 2θ:
+                                        </div>
+                                        <div class="col-md-8">
+                                            <span id="experiment-min-angle"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4 text-end">
+                                            XRD Max 2θ:
+                                        </div>
+                                        <div class="col-md-8">
+                                            <span id="experiment-max-angle"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4 text-end">
+                                            Precision:
+                                        </div>
+                                        <div class="col-md-8">
+                                            <span id="experiment-precision"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4 text-end">
+                                            Temperature Info:
+                                        </div>
+                                        <div class="col-md-8">
+                                            <span id="experiment-temperature-info"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>   
+                
+                            <!-- AISH Loader Section -->
+                            <div class="col-md-4 d-flex">
+                                <div class="border p-2 flex-fill">
+                                    <h4>AISH Loader</h4>
+                                    <div class="row">
+                                        <div class="col-md-5 text-end">
+                                            Allow Movement:
+                                        </div>
+                                        <div class="col-md-7">
+                                            <span id="allow-movement"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-5 text-end">
+                                            Error Halt:
+                                        </div>
+                                        <div class="col-md-7">
+                                            <span id="error-halt"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-5 text-end">
+                                            Sample Loaded:
+                                        </div>
+                                        <div class="col-md-7">
+                                            <span id="sample-loaded"></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                
-                            <!-- Sample Loader Section -->
-                            <div class="col-md-3 d-flex">
-                                <div class="border p-2 flex-fill">
+
+                            <!-- Sample Loader and Stage Loader stacked -->
+                            <div class="col-md-3">
+                                <!-- Sample Loader Section -->
+                                <div class="border p-2 mb-3">
                                     <h4>Sample Loader</h4>
-                                    <p>Ender3 State: <span id="ender3-state"></span></p>
-                                    <p>Gripper State: <span id="gripper-state"></span></p>
+                                    <div class="row">
+                                        <div class="col-md-6 text-end">
+                                            Ender3 State:
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span id="ender3-state"></span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 text-end">
+                                            Gripper State:
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span id="gripper-state"></span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                
-                            <!-- Stage Loader Section -->
-                            <div class="col-md-3 d-flex">
-                                <div class="border p-2 flex-fill">
+
+                                <!-- Stage Loader Section -->
+                                <div class="border p-2">
                                     <h4>Stage Loader</h4>
-                                    <p>Linear Rail State: <span id="linear-rail-state"></span></p>
+                                    <div class="row">
+                                        <div class="col-md-6 text-end">
+                                            Linear Rail State:
+                                        </div>
+                                        <div class="col-md-6">
+                                            <span id="linear-rail-state"></span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
+                </div>
             </div>
-            </div>
-            
         </div>
+
     </div>
 
     
@@ -406,11 +491,7 @@
         </div>
     </div>
 
-
+    <!-- Load Main script -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-    <!-- <script src="/static/js/app.js"></script> -->
-
-
 </body>
-
 </html>

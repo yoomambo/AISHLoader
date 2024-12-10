@@ -7,6 +7,9 @@ import os
 import time
 
 print('\n\n\n')
+# Flask application
+app = Flask(__name__, static_url_path='/static')
+WEBSITE_TEST_MODE = True
 
 #Set up logging
 logging.basicConfig(
@@ -14,12 +17,7 @@ logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s: %(message)s",
     datefmt='%y-%m-%d %H:%M:%S'
 )
-
-
-# Flask application
-app = Flask(__name__, static_url_path='/static')
-WEBSITE_TEST_MODE = True
-tempvar = 0
+app.logger.setLevel(logging.INFO)
 
 # STATE VARIABLES
 IS_SAMPLE_LOADED = False
@@ -43,6 +41,10 @@ logging.info("AISHLoader initialized")
 aish_experiment = None
 experiment_thread = ThreadPoolExecutor(max_workers=1)
 
+############################################################################################################
+# API ENDPOINTS
+############################################################################################################
+
 # Endpoint to get the state of the automated In-situ heating XRD loader
 # Intended use is for the frontend to poll the state of the system
 @app.route('/api/get_state', methods=['GET'])
@@ -50,12 +52,8 @@ def get_state():
     '''
     Returns the state of the automated In-situ heating XRD loader
     '''
-    # state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
-            #  'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
     state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
              'aish_experiment': aish_experiment if aish_experiment is not None else None}
-
-    print("AISH EXPERIMENT", aish_experiment)
 
     return jsonify(state)
 
@@ -87,49 +85,44 @@ def command():
     sample_num = request.json['sample_num']
     xrd_params = request.json['xrd_params']
 
-    logging.info(f"Received command to run XRD on sample \n\t{sample_num} \n\t{xrd_params}")
+    logging.info(f"Received command to run XRD on sample {sample_num} \n\t{xrd_params}")
 
-    
-    # aish_experiment = {'sample_num': sample_num, 'xrd_params': xrd_params}
-    # print("OUT OF TEST", aish_experiment)
-    # def run_test():
-    #     global aish_experiment  #Ensure we are using the global aish_experiment
-    #     print(f"IN TEST {aish_experiment}\n\n")
-    #     logging.info("Starting experiment")
-    #     time.sleep(5)
-        
-    #     aish_experiment = "WORLD"
-    #     print(f"IN TEST2 {aish_experiment}\n\n")
-    #     time.sleep(5)
+    if WEBSITE_TEST_MODE:
+        aish_experiment = {'sample_num': sample_num, 'xrd_params': xrd_params}
+        print("OUT OF TEST", aish_experiment)
+        def run_xrd(sample_num):
+            global aish_experiment  #Ensure we are using the global aish_experiment
+            print(f"IN TEST {aish_experiment}\n\n")
+            logging.info("Starting experiment")
+            time.sleep(10)
 
-    #     print(f"IN TEST3 {aish_experiment}\n\n")
-    #     aish_experiment = None
-    # experiment_thread.submit(run_test)
+            print(f"IN TEST3 {aish_experiment}\n\n")
+            aish_experiment = None
+    else: 
+        # Create a new XRD experiment, and loading routine
+        sample_name = xrd_params['sample_name']
+        min_angle = xrd_params['min_angle']
+        max_angle = xrd_params['max_angle']
+        prec = xrd_params['prec']
+        temperatures = xrd_params['temperatures']
+        aish_experiment = AISHExperiment(sample_name, min_angle, max_angle, prec, temperatures)
+        def run_xrd(sample_num):
+            global aish_experiment
+            global aish_loader
 
-    # # Create a new XRD experiment, and loading routine
-    sample_name = xrd_params['sample_name']
-    min_angle = xrd_params['min_angle']
-    max_angle = xrd_params['max_angle']
-    prec = xrd_params['prec']
-    temperatures = xrd_params['temperatures']
-    aish_experiment = AISHExperiment(sample_name, min_angle, max_angle, prec, temperatures)
-    def run_xrd(sample_num, xrd_params):
-        global aish_experiment
-        global aish_loader
+            # Load the sample and run
+            aish_loader.load_sample(sample_num)
+            aish_experiment.run_sequence()
+            aish_loader.unload_sample()
 
-        # Load the sample and run
-        aish_loader.load_sample(sample_num)
-        aish_experiment.run_sequence(xrd_params)
-        aish_loader.unload_sample()
+            # Home all the hardware
+            aish_loader.home_all()
 
-        # Home all the hardware
-        aish_loader.home_all()
-
-        #Reset the experiment
-        aish_experiment = None
+            #Reset the experiment
+            aish_experiment = None
 
     # Submit the full routine to the executor
-    experiment_thread.submit(run_xrd, sample_num, xrd_params)
+    experiment_thread.submit(run_xrd, sample_num)
 
     return jsonify({"success": True})
 

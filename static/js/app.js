@@ -46,10 +46,8 @@ setInterval(() => {
     }
 
     // Update the system state on the page
-    renderQueue();
     renderCurrentlyRunning(systemState);
-
-
+    renderQueue();
     renderCurrentSystemState(systemState);
 
 
@@ -114,25 +112,56 @@ function renderCurrentSystemState(data) {
         document.getElementById('aish-loader-status').innerHTML = 'Disconnected';
         document.getElementById('aish-loader-status').classList.remove('bg-success');
         document.getElementById('aish-loader-status').classList.add('bg-danger');
-        return;
     }
-    // Reset the badge status to indicate system is operational
-    document.getElementById('aish-loader-status').innerHTML = 'Operational';
-    document.getElementById('aish-loader-status').classList.remove('bg-danger');
-    document.getElementById('aish-loader-status').classList.add('bg-success');
+    else {
+        // Reset the badge status to indicate system is operational
+        document.getElementById('aish-loader-status').innerHTML = 'Operational';
+        document.getElementById('aish-loader-status').classList.remove('bg-danger');
+        document.getElementById('aish-loader-status').classList.add('bg-success');
+
+        // AISH Loader section
+        document.getElementById('allow-movement').textContent = data.aish_loader.allow_movement ? 'Yes' : 'No';
+        document.getElementById('error-halt').textContent = data.aish_loader.error_halt ? 'Yes' : 'No';
+        document.getElementById('sample-loaded').textContent = data.aish_loader.sample_loaded;
+
+        // Sample Loader section
+        document.getElementById('ender3-state').textContent = data.aish_loader.ender3;
+        document.getElementById('gripper-state').textContent = data.aish_loader.arduino.gripper;
+
+        // Stage Loader section
+        document.getElementById('linear-rail-state').textContent = data.aish_loader.arduino.linear_rail;
+    }
     
-    // AISH Loader section
-    document.getElementById('allow-movement').textContent = data.aish_loader.allow_movement ? 'Yes' : 'No';
-    document.getElementById('error-halt').textContent = data.aish_loader.error_halt ? 'Yes' : 'No';
-    document.getElementById('sample-loaded').textContent = data.aish_loader.sample_loaded;
+    if (data.aish_experiment == null) {
+        // Clear the experiment info
+        document.getElementById('experiment-sample-num').textContent = '';
+        document.getElementById('experiment-min-angle').textContent = '';
+        document.getElementById('experiment-max-angle').textContent = '';
+        document.getElementById('experiment-precision').textContent = '';
+        document.getElementById('experiment-temperature-info').textContent = '';
+    } else {
+        // Experiment section
+    
+        document.getElementById('experiment-sample-num').textContent = data.aish_experiment.sample_num;
+        document.getElementById('experiment-min-angle').textContent = data.aish_experiment.xrd_params.min_angle + "°";
+        document.getElementById('experiment-max-angle').textContent = data.aish_experiment.xrd_params.max_angle + "°";
+        document.getElementById('experiment-precision').textContent = data.aish_experiment.xrd_params.precision;
+    
+        // Temperatures info
+        const temps = data.aish_experiment.xrd_params.temperatures;
+        let tempsInfo;
+        if (temps.length <= 5) {
+            tempsInfo = temps.join(', ');
+        } else {
+            tempsInfo = `${temps.slice(0, 3).join(', ')} ... ${temps.slice(-3).join(', ')}`;
+        }
+        const scansInfo = `Start: ${temps[0]}, End: ${temps[temps.length - 1]}, Total: ${temps.length}`;
+        document.getElementById('experiment-temperature-info').innerHTML = `${tempsInfo}<br>${scansInfo}`;
 
-    // Sample Loader section
-    document.getElementById('ender3-state').textContent = data.aish_loader.ender3;
-    document.getElementById('gripper-state').textContent = data.aish_loader.arduino.gripper;
-
-    // Stage Loader section
-    document.getElementById('linear-rail-state').textContent = data.aish_loader.arduino.linear_rail;
+    }
+    
 }
+
 
 
 //////////////////////////////////////////////
@@ -141,6 +170,25 @@ function renderCurrentSystemState(data) {
 // Function to render the queue items in the sortable list
 function renderQueue() {
     queueList.innerHTML = ''; // Clear the list before rendering
+
+    //Update the queue status badge (Paused or running)
+    const queueStatusBadge = document.getElementById('queue-status');
+    if (queue_paused && queueRunningItem != null) {
+        queueStatusBadge.textContent = 'Will Stop After Current';  // Will pause after current item
+        queueStatusBadge.classList.remove('bg-success');
+        queueStatusBadge.classList.remove('bg-warning');
+        queueStatusBadge.classList.add('bg-info');
+    } else if (queue_paused) {
+        queueStatusBadge.textContent = 'Paused';
+        queueStatusBadge.classList.remove('bg-success');
+        queueStatusBadge.classList.remove('bg-info');
+        queueStatusBadge.classList.add('bg-warning');
+    } else {
+        queueStatusBadge.textContent = 'Running';
+        queueStatusBadge.classList.remove('bg-warning');
+        queueStatusBadge.classList.remove('bg-info');
+        queueStatusBadge.classList.add('bg-success');
+    }
 
     // For each of the items in the queue list, make a queue item and add it to the sortable list
     queueItems_array.forEach((item, index) => {
@@ -185,6 +233,7 @@ function renderCurrentlyRunning(systemStateData) {
 
     if (queue_paused && systemStateData.aish_experiment == null) {
         runningItemDiv.innerHTML = ''; // Clear the currently running box
+        queueRunningItem = null;    // Clear the running item
         return;
     }
 
@@ -238,9 +287,10 @@ function handle_button_queueAdd(event) {
             return;
         }
 
-        // Linear interpolation of temperatures
+        // Linear interpolation of temperatures (rounded to integers)
         const tempStep = (maxTemp - minTemp) / (numScans - 1);
-        temperatures = Array.from({ length: numScans }, (_, i) => minTemp + i * tempStep);
+        temperatures = Array.from({ length: numScans }, (_, i) => Math.round(minTemp + i * tempStep));
+
     }
 
     // Construct the new item object
@@ -302,9 +352,10 @@ function sendNextQueueItem() {
             min_angle: queueRunningItem.minAngle,
             max_angle: queueRunningItem.maxAngle,
             precision: queueRunningItem.precision,
-            temperatures: queueRunningItem.temperatures
+            temperatures: queueRunningItem.temperatures.length ? queueRunningItem.temperatures : [25]
         }
     }
+    console.log('Sending Command: ', command_package);
 
     // Send the command to the Flask endpoint
     $.ajax({
@@ -323,6 +374,7 @@ function handle_button_queueStart() {
     if (queueItems_array.length > 0) {
         queue_paused = false;
         sendNextQueueItem();
+        renderQueue();
     } else {
         alert('No items in the queue to start.');
     }
@@ -331,10 +383,13 @@ function handle_button_queueStart() {
 function handle_button_queuePause() {
     console.log('Queue Paused');
     queue_paused = true;    // Set the queue to paused, so it doesn't send the next item
+    renderQueue(); // Re-render the queue to reflect changes
 }
 
 function handle_button_queueAbort() {
+    console.warn("QUEUE ABORTED");
     queue_paused = true;    // Set the queue to paused, so it doesn't send the next item
+    renderQueue(); // Re-render the queue to reflect changes
 
     // Send the abort command to the Flask endpoint
     $.ajax({

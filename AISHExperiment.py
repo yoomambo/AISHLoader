@@ -1,3 +1,8 @@
+"""
+AISHExperiment.py
+This defines the AISHExperiment class, which is used to control the XRD machine. This stores the information 
+"""
+
 import numpy as np
 import random
 import time
@@ -74,7 +79,7 @@ class Diffractometer:
 
             # Allow some tolerance before calling timeout
             # e.g., it may take some time reach the measurement temperature
-            tolerance = 600 # by default, allow 10 minutes
+            tolerance = 10000                                           #MODIFIED TO 10000 SECONDS to allow cooling down
 
             # Write to params file; will be read by LabLims job file
             with open(r"C:\Users\9KKFWL2\Documents\Interfacing_Tests\ScanParams.txt", 'w+') as f:
