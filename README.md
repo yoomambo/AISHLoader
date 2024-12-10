@@ -18,8 +18,6 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-Connecting Serial
-The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
 
 # Control Interface Guide
 `pass`
@@ -39,6 +37,17 @@ A Solidworks CAD is supplied...
 A `STEPPERONLINE Stepper Motor Driver` controller was used to control the linear rail. It was set to 400 pulses/rotation, meaning that each time the Arduino pulses the motor driver, the motor rotates 1/400 of a rotation.  The pinout used is shown below:
 
 ![image](https://github.com/user-attachments/assets/d1e697b1-f1c8-4efd-ad24-dfa8ad17662b)
+
+Errors
+===
+### Manual adjustment of Ender3
+Sometimes, manual adjustment of the Ender3 needs to be done to put it in a position that is good for testing.  The gantry cannot be manipulated when the Ender is powered, so it must be de-powered.  Remember to unplug the Serial connection, then power down the Ender.  Follow the procedure in [Ender3 Connection](#Ender3-Connection).
+
+### Ender3 Connection
+When the Ender3 is not connected properly, the unit scale gets changed.  This usually results in the Ender moving about 1/2 the distance that is inputted.  To fix, restart the system, unplug the serial connection to the Ender, and power cycle the Ender.  Make sure to wait for the Ender to start up and be ready, then plug in the serial connection and try the connection.
+
+### Connecting Serial
+The system has trouble connecting at first.  Unplug the serial connections, then unpower/repower the extender cables, then reconnect the serial connections.  Basically have to power/unpower the first connector, then connect the next connector, unpower and power that, then can continue connecting.
 
 
 Notes
