@@ -141,8 +141,7 @@ function renderCurrentSystemState(data) {
         document.getElementById('experiment-temperature-info').textContent = '';
     } else {
         // Experiment section
-    
-        document.getElementById('experiment-sample-num').textContent = data.aish_experiment.sample_num;
+        document.getElementById('experiment-sample-num').textContent = data.aish_experiment.xrd_params.sample_num;
         document.getElementById('experiment-min-angle').textContent = data.aish_experiment.xrd_params.min_angle + "°";
         document.getElementById('experiment-max-angle').textContent = data.aish_experiment.xrd_params.max_angle + "°";
         document.getElementById('experiment-precision').textContent = data.aish_experiment.xrd_params.precision;
@@ -159,10 +158,7 @@ function renderCurrentSystemState(data) {
         document.getElementById('experiment-temperature-info').innerHTML = `${tempsInfo}<br>${scansInfo}`;
 
     }
-    
 }
-
-
 
 //////////////////////////////////////////////
 // Queue Management
@@ -372,8 +368,7 @@ function sendNextQueueItem() {
 function handle_button_queueStart() {
 
     if (queueItems_array.length > 0) {
-        queue_paused = false;
-        sendNextQueueItem();
+        queue_paused = false;   // Set the queue to running
         renderQueue();
     } else {
         alert('No items in the queue to start.');

@@ -77,7 +77,7 @@ class ErrorChecker:
                 except StateError as e:
                     logging.error(f"State Error: {e}")
                 except Exception as e:
-                    logging.error(f"Error not related to communication, so uncaught:")
+                    logging.exception(f"Error not related to communication, so uncaught:")
                     raise e
                 finally:
                     # Write cleanup code here

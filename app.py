@@ -53,7 +53,7 @@ def get_state():
     Returns the state of the automated In-situ heating XRD loader
     '''
     state = {'aish_loader': aish_loader.get_state() if aish_loader is not None else None,
-             'aish_experiment': aish_experiment if aish_experiment is not None else None}
+             'aish_experiment': aish_experiment.get_progress() if aish_experiment is not None else None}
 
     return jsonify(state)
 
@@ -82,8 +82,20 @@ def command():
     intended for ALabOS to use.
     '''
     global aish_experiment  #Ensure we are using the global variable to store the experiment
-    sample_num = request.json['sample_num']
-    xrd_params = request.json['xrd_params']
+
+    data = request.get_json()  # Parse incoming JSON data
+
+    sample_num = int(data.get('sample_num'))  # Extract sample number
+    xrd_params = data.get('xrd_params')  # Extract XRD parameters
+    sample_name = data.get('sample_name')  # Extract sample name
+
+    # Create a new XRD experiment, and loading routine
+    min_angle = float(xrd_params['min_angle'])
+    max_angle = float(xrd_params['max_angle'])
+    precision = xrd_params['precision']
+    temperatures = xrd_params['temperatures']
+    print(f"min_angle {min_angle}, type: {type(min_angle)}")
+    print(f"max_angle {max_angle}, type: {type(max_angle)}")
 
     logging.info(f"Received command to run XRD on sample {sample_num} \n\t{xrd_params}")
 
@@ -93,26 +105,26 @@ def command():
         def run_xrd(sample_num):
             global aish_experiment  #Ensure we are using the global aish_experiment
             print(f"IN TEST {aish_experiment}\n\n")
+
             logging.info("Starting experiment")
             time.sleep(10)
 
             print(f"IN TEST3 {aish_experiment}\n\n")
             aish_experiment = None
     else: 
-        # Create a new XRD experiment, and loading routine
-        sample_name = xrd_params['sample_name']
-        min_angle = xrd_params['min_angle']
-        max_angle = xrd_params['max_angle']
-        prec = xrd_params['prec']
-        temperatures = xrd_params['temperatures']
-        aish_experiment = AISHExperiment(sample_name, min_angle, max_angle, prec, temperatures)
+        aish_experiment = AISHExperiment(sample_name, sample_num, min_angle, max_angle, precision, temperatures)
         def run_xrd(sample_num):
             global aish_experiment
             global aish_loader
 
             # Load the sample and run
+            logging.info("Loading sample")
             aish_loader.load_sample(sample_num)
+            
+            logging.info("Running XRD")
             aish_experiment.run_sequence()
+            
+            logging.info("Unloading sample")
             aish_loader.unload_sample()
 
             # Home all the hardware

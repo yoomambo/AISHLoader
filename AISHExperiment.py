@@ -137,12 +137,13 @@ class AISHExperiment:
     _SAVE_DIR = './AISH_results'
     _MAX_TEMP = 1100
     
-    def __init__(self, name, min_angle, max_angle, prec, temperatures):
+    def __init__(self, name, sample_num, min_angle, max_angle, precision, temperatures):
         self.results_dir = f"{self._SAVE_DIR}/{name}"
+        self.sample_num = sample_num
         
         self.min_angle = min_angle
         self.max_angle = max_angle
-        self.prec = prec
+        self.precision = precision
         
         #Ensure no temperatures are above 1100C
         self.temperatures = [temp if temp <= self._MAX_TEMP else self._MAX_TEMP for temp in temperatures]
@@ -193,7 +194,7 @@ class AISHExperiment:
 
     def _single_scan(self, temp):
         existing_file = None
-        prec = self.prec
+        precision = self.precision
 
         # Define diffractometer object
         diffrac = Diffractometer('Bruker')
@@ -201,7 +202,7 @@ class AISHExperiment:
         # Run initial scan
         min_angle = self.min_angle
         max_angle = self.max_angle
-        x, y = diffrac.execute_scan(min_angle, max_angle, prec, temp, None)
+        x, y = diffrac.execute_scan(min_angle, max_angle, precision, temp, None)
 
         # Write data
         # Check if the Spectra directory exists, if not, create it
@@ -217,7 +218,13 @@ class AISHExperiment:
         logging.info(f"Saved data of scan for {temp}C to {abs_saved_filepath}")
 
     def get_progress(self):
-        return self.progress
+        return {'progress': self.progress,
+                'xrd_params': {'sample_num': self.sample_num,
+                                'min_angle': self.min_angle, 
+                               'max_angle': self.max_angle, 
+                               'precision': self.precision, 
+                               'temperatures': self.temperatures}
+                }
     
     def abort(self):
         self.ABORT = True
