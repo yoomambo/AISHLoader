@@ -27,7 +27,8 @@ pip install -r requirements.txt
 
 # Schematic
 Wiring Diagram:
-![Wiring Diagram](https://github.com/user-attachments/assets/76260eae-3e04-467a-bbfc-a75757b5d316)
+![image](https://github.com/user-attachments/assets/186741f4-cccc-475d-b893-e7a39c2f8920)
+
 
 
 # CAD
