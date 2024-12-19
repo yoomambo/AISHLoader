@@ -12,6 +12,15 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+# To do:
+Hardware:
+- Adjust linear rail alignment. Currently, it is slightly misaligned with the alignment rails and does not insert perfectly
+- Increase stiffness of the gripper if the gripping is not consistent.
+
+Software:
+- Test abortion feature.  Currently, the abortion procedure is not quite complete
+- Known bug: pausing the queue when an experiment is running will make the queue pause after the current experiment is done (will not send the next experiment after finish).  But pressing resume before the experiment is done just sends the next experiment, even if the current one is not finished, causing an error. Likely fix: change logic to just toggle the queue pause state, and remove sendNextItem() function in the resume button callback.
+- Test data saving location for XRD data
 
 # Control Interface Guide
 ![image](https://github.com/user-attachments/assets/515e7cc4-e6b7-4511-bce1-c0119428e87d)
