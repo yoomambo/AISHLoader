@@ -1,9 +1,3 @@
-# To Do:
-- [ ] Make statechart diagram of system - list all states. This documents the flow/architecture of the system
-- [ ] Document Installation
-- [ ] Sync CAD
-- [ ] Document UI
-
 # Installation
 First, download the application and install dependencies:
 ```bash
@@ -18,20 +12,38 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
+# To do:
+Hardware:
+- [ ] Adjust linear rail alignment. Currently, it is slightly misaligned with the alignment rails and does not insert perfectly
+- [ ] Increase stiffness of the gripper if the gripping is not consistent.
+
+Software:
+- [ ] Test abortion feature.  Currently, the abortion procedure is not quite complete
+- [ ] Known bug: pausing the queue when an experiment is running will make the queue pause after the current experiment is done (will not send the next experiment after finish).  But pressing resume before the experiment is done just sends the next experiment, even if the current one is not finished, causing an error. Likely fix: change logic to just toggle the queue pause state, and remove sendNextItem() function in the resume button callback.
+- [ ] Test data saving location for XRD data
 
 # Control Interface Guide
-`pass`
+![image](https://github.com/user-attachments/assets/515e7cc4-e6b7-4511-bce1-c0119428e87d)
 
-# System Control Flow
-`pass`
+The web UI is broken into 4 main parts:
+- Add to queue (Blue) - adds items to the queue with all the experimental parameters.
+- Queue (Green) - displays queued items and updates when items are executed. The items can be dragged to reorder.
+- System status (Red) - displays the current system state.
+- Manual control (Orange) - collapsable menu that contains buttons to manually control all components of the AISH Loader.
 
-# Schematic
-Wiring Diagram:
-![Wiring Diagram](https://github.com/user-attachments/assets/76260eae-3e04-467a-bbfc-a75757b5d316)
 
+# System Diagram
+## Top-level Flowchart
+![image](https://github.com/user-attachments/assets/fa3d0538-6c92-4429-ad5b-427ea9c7a1e5)
+The python/Flask server controls the entire system. It recieves HTTP requests to the API endpoints either from the website (user input), or from ALab; these HTTP requests are intended to work for both cases and be the minimum set of instructions needed to control the system.
+
+The Flask server then communicates over pyFirmata (based on serial) with the Arduino to control the gripper and linear rail, and directly communicates with the Ender3 over serial.  This server runs on the XRD computer and writes to a local directory to control the XRD.
+
+## Wiring Diagram:
+![image](https://github.com/user-attachments/assets/186741f4-cccc-475d-b893-e7a39c2f8920)
 
 # CAD
-A Solidworks CAD is supplied...
+A Solidworks CAD is supplied in the /cad.  A full BOM is left in /documentation.
 
 # Stepper Motor Driver
 A `STEPPERONLINE Stepper Motor Driver` controller was used to control the linear rail. It was set to 400 pulses/rotation, meaning that each time the Arduino pulses the motor driver, the motor rotates 1/400 of a rotation.  The pinout used is shown below:
