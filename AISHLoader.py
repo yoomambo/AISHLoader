@@ -232,4 +232,7 @@ class AISHLoader(StateTracker):
             self.ALLOW_MOVEMENT = True
             self.ender3.move_to_rest()
             
-            
+if __name__ == "__main__":
+    load_obj=AISHLoader("COM5", "COM3")
+    load_obj.load_sample(0)
+    load_obj.unload_sample()

@@ -329,3 +329,8 @@ class ArduinoHardware:
             # print(f"\tConverted data: {[bin(d) for d in conv_data]} = {conv_data}")
             
             self._gripper_servo_angle = (conv_data[0])
+
+if __name__ == "__main__":
+    arduino_obj=ArduinoHardware("COM3")
+    # arduino_obj.linear_rail.home()
+    arduino_obj.gripper.close()

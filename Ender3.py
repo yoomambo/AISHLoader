@@ -30,13 +30,14 @@ class Ender3(StateTracker):
     ENDER_LIMITS = [(0, 230), (0, 220), (0, 143)]
     ENDER_MAX_SPEED = np.array([1000, 1000, 300])
 
-    def __init__(self, PORT = '/dev/tty.usbmodem1401'):
+    def __init__(self, PORT):
         super().__init__()      # Initialize the StateTracker class
         self.PORT = PORT
 
         try:
             self.serial = serial.Serial(PORT, 115200)
-        except:
+        except Exception as e:
+            print(e)
             raise Exception("Failed to connect to Ender 3")
 
         logging.info(f"Ender3 - Connected on port: {PORT}")
@@ -221,3 +222,11 @@ class Ender3(StateTracker):
             time.sleep(0.5)
         
         raise CommunicationError("Ender3 - Wait command timed out")
+    
+
+if __name__ == "__main__":
+    ender3_obj=Ender3(PORT="COM5")
+    ender3_obj.get_state()
+    ender3_obj.init_homing()
+    # ender3_obj.move_eject_bed()
+    # ender3_obj.move_to_sample(0)
